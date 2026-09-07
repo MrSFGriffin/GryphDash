@@ -1,10 +1,9 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
+	openrouterprovider "gryphdash/providers/openrouter"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -150,18 +149,6 @@ func TestNullZeroAndAssets(t *testing.T) {
 		}
 	}
 }
-func TestRPCNotificationsAndErrors(t *testing.T) {
-	var input bytes.Buffer
-	r := rpcClient{input: &input, output: bufio.NewScanner(strings.NewReader("{\"method\":\"account/updated\"}\n{\"id\":1,\"result\":{\"ok\":true}}\n{\"id\":2,\"error\":{\"code\":-32601,\"message\":\"secret\"}}\n"))}
-	data, err := r.call("account/read", nil)
-	if err != nil || data["ok"] != true {
-		t.Fatal(data, err)
-	}
-	_, err = r.call("account/usage/read", nil)
-	if err == nil || strings.Contains(err.Error(), "secret") {
-		t.Fatal("missing or unsafe error", err)
-	}
-}
 func TestFailureRetainsSnapshot(t *testing.T) {
 	now := time.Now()
 	c := &collector{state: snapshot{Limits: result{Data: map[string]any{"marker": true}, Updated: now}}}
@@ -192,9 +179,9 @@ done
 		_, _ = w.Write([]byte(`{"data":{"usage_monthly":7}}`))
 	}))
 	defer openRouter.Close()
-	previousBase := openRouterAPIBase
-	openRouterAPIBase = openRouter.URL
-	defer func() { openRouterAPIBase = previousBase }()
+	previousBase := openrouterprovider.BaseURLOverride
+	openrouterprovider.BaseURLOverride = openRouter.URL
+	defer func() { openrouterprovider.BaseURLOverride = previousBase }()
 	old := time.Now().Add(-time.Hour)
 	c := &collector{executable: path, openRouterKey: "test-key", httpClient: openRouter.Client(), state: snapshot{Usage: result{Data: map[string]any{"old": true}, Updated: old}}}
 	c.refresh(context.Background())

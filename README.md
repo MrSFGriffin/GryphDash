@@ -1,6 +1,6 @@
 # GryphDash
 
-A customizable widget dashboard for live Codex usage and limits. The Go server
+A customizable widget dashboard for metrics from multiple providers. The Go server
 uses only the standard library and embeds all HTML, CSS, and JavaScript, including
 GridStack, in a single executable. Live metrics require the Codex CLI on the same
 machine. Widget definitions live in the embedded [`widgets.json`](widgets.json)
@@ -39,7 +39,7 @@ default mode when no command is supplied.
 
 ## Customize your dashboard
 
-- **Add widgets** opens a searchable picker of every available Codex metric.
+- **Add widgets** opens a searchable picker of every available provider metric.
 - **Edit dashboard** enables dragging by a widget heading, corner resizing, and
   removal with the × button. Removed widgets remain available in the picker.
 - For keyboard editing, Tab to a widget heading and use arrow keys to move it;
@@ -74,6 +74,69 @@ with `scope: "limitBuckets"` expand once for every provider-returned bucket.
 The server validates required catalog fields at startup and embeds the JSON in the
 binary. Keep IDs stable when changing names or descriptions so users' saved
 browser layouts continue to work.
+
+## Add custom widgets
+
+Widget definitions are data-driven. To add a metric from a provider that is
+already supported, add an entry to [`widgets.json`](widgets.json); do not edit
+the web or TUI renderers. Each entry needs a stable `id`, `group`, `name`,
+`description`, `width`, `height`, and `logic` object. For example:
+
+```json
+{
+  "id": "openrouter/spend/monthly",
+  "group": "OpenRouter",
+  "name": "Monthly spend",
+  "description": "Usage charged this month · USD",
+  "default": false,
+  "width": 4,
+  "height": 4,
+  "logic": { "type": "scalar", "source": "openrouterKey", "path": "usage_monthly" }
+}
+```
+
+Use `scalar` for a single field, `timestamp` for a date, `daily` for token
+activity, `resetDetails` for reset lists, and `limitWindow` for a limit bucket.
+The `source` and `path` must match data returned by the provider adapter. Keep
+IDs stable so saved browser and TUI layouts continue to work.
+
+### Adding a new provider
+
+For a new external service, such as a stock-price, music, or calendar service:
+
+1. Create a package directory such as `providers/<name>/`.
+2. Add a client that reads credentials from environment variables, calls the
+   service, and returns JSON-like fields in named result sections. Keep all HTTP
+   and response parsing in this package.
+3. Add `providers/<name>/client_test.go` using an `httptest` fixture. Cover
+   successful responses, authentication failures, malformed responses, and any
+   provider-specific limits. Tests must never call the live service.
+4. Add a provider reader in `collector.go` that adapts the client result to named
+   sections, then register it in the collector's provider list. A client section
+   named `metric` might be exposed as source `<name>` with path `metric`.
+5. Add widget definitions to `widgets.json`:
+
+```json
+{
+  "id": "example/item/metric",
+  "group": "Example provider",
+  "name": "Metric value",
+  "description": "A value returned by the provider",
+  "default": false,
+  "width": 4,
+  "height": 4,
+  "logic": { "type": "scalar", "source": "example", "path": "value" }
+}
+```
+
+6. Add required environment variables to the Configuration table and explain
+   how to obtain them. Never put credentials in `widgets.json`, source code, or
+   browser storage.
+7. Run the standard Go checks. The web app and TUI discover the new widget from
+   the catalog; renderer changes are not needed.
+
+Provider API clients and their tests belong under `providers/<name>/`; collector
+registration is the only application-level wiring currently required.
 
 ## Metrics
 

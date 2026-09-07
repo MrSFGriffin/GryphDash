@@ -1,4 +1,4 @@
-package main
+package codex
 
 import (
 	"bufio"
@@ -6,31 +6,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os/exec"
-	"sync"
 	"time"
 )
 
-type result struct {
+type Result struct {
 	Data    map[string]any
 	Updated time.Time
 	Error   string
 }
-type snapshot struct {
-	Account, Limits, Usage           result
-	OpenRouterKey, OpenRouterCredits result
-}
-type collector struct {
-	mu            sync.RWMutex
-	state         snapshot
-	executable    string
-	openRouterKey string
-	httpClient    *http.Client
-}
-
-func (c *collector) snapshot() snapshot { c.mu.RLock(); defer c.mu.RUnlock(); return c.state }
-
+type Data struct{ Account, Limits, Usage Result }
+type Client struct{ Executable string }
 type rpcClient struct {
 	input  io.Writer
 	output *bufio.Scanner
@@ -56,7 +42,7 @@ func (r *rpcClient) call(method string, params any) (map[string]any, error) {
 			return nil, fmt.Errorf("invalid app-server response")
 		}
 		if msg.Method != "" {
-			if msg.ID != nil { // No server-initiated actions are supported by this read-only client.
+			if msg.ID != nil {
 				if err := json.NewEncoder(r.input).Encode(map[string]any{"id": *msg.ID, "error": map[string]any{"code": -32601, "message": "Unsupported method"}}); err != nil {
 					return nil, err
 				}
@@ -79,80 +65,61 @@ func (r *rpcClient) call(method string, params any) (map[string]any, error) {
 	}
 	return nil, fmt.Errorf("app-server stopped or request timed out")
 }
-func (c *collector) refresh(parent context.Context) {
-	openRouterDone := make(chan struct{})
-	go func() {
-		defer close(openRouterDone)
-		c.refreshOpenRouter(parent)
-	}()
-	defer func() { <-openRouterDone }()
+
+func (c Client) Read(parent context.Context) Data {
+	out := Data{}
 	ctx, cancel := context.WithTimeout(parent, 45*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, c.executable, "app-server")
+	cmd := exec.CommandContext(ctx, c.Executable, "app-server")
 	input, err := cmd.StdinPipe()
 	if err != nil {
-		c.fail()
-		return
+		out.fail(err)
+		return out
 	}
 	defer input.Close()
 	output, err := cmd.StdoutPipe()
 	if err != nil {
-		c.fail()
-		return
+		out.fail(err)
+		return out
 	}
 	defer output.Close()
-	// Discard stderr: upstream diagnostics may contain account information.
 	if err = cmd.Start(); err != nil {
-		c.fail()
-		return
+		out.fail(err)
+		return out
 	}
 	defer func() { input.Close(); cancel(); _ = cmd.Wait() }()
 	scanner := bufio.NewScanner(output)
 	scanner.Buffer(make([]byte, 4096), 8<<20)
 	rpc := &rpcClient{input: input, output: scanner}
-	_, err = rpc.call("initialize", map[string]any{"clientInfo": map[string]string{"name": "gryphdash", "version": "0.2.0"}})
-	if err != nil {
-		c.fail()
-		return
+	if _, err = rpc.call("initialize", map[string]any{"clientInfo": map[string]string{"name": "gryphdash", "version": "0.2.0"}}); err != nil {
+		out.fail(err)
+		return out
 	}
 	if err = json.NewEncoder(input).Encode(map[string]any{"method": "initialized"}); err != nil {
-		c.fail()
-		return
+		out.fail(err)
+		return out
 	}
 	for _, method := range []string{"account/read", "account/rateLimits/read", "account/usage/read"} {
-		data, err := rpc.call(method, nil)
-		c.mu.Lock()
-		target := &c.state.Account
+		data, callErr := rpc.call(method, nil)
+		r := &out.Account
 		if method == "account/rateLimits/read" {
-			target = &c.state.Limits
+			r = &out.Limits
 		}
 		if method == "account/usage/read" {
-			target = &c.state.Usage
+			r = &out.Usage
 		}
-		if err != nil {
-			target.Error = err.Error()
+		if callErr != nil {
+			r.Error = callErr.Error()
 		} else {
-			*target = result{Data: data, Updated: time.Now()}
-		}
-		c.mu.Unlock()
-	}
-}
-func (c *collector) fail() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	for _, r := range []*result{&c.state.Account, &c.state.Limits, &c.state.Usage, &c.state.OpenRouterKey, &c.state.OpenRouterCredits} {
-		r.Error = "Could not connect to Codex. Check that the CLI is installed and run codex login as the server user."
-	}
-}
-func (c *collector) run(ctx context.Context, interval time.Duration) {
-	for {
-		c.refresh(ctx)
-		timer := time.NewTimer(interval)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-			return
-		case <-timer.C:
+			*r = Result{Data: data, Updated: time.Now()}
 		}
 	}
+	return out
+}
+func (d *Data) fail(err error) {
+	message := "Could not connect to Codex. Check that the CLI is installed and run codex login as the server user."
+	if err != nil {
+		message = err.Error()
+	}
+	d.Account.Error, d.Limits.Error, d.Usage.Error = message, message, message
 }
