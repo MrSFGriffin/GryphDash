@@ -69,17 +69,17 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "d", "x", "delete":
 			m.remove()
 		case "left", "h":
-			m.move(-1)
+			m.navigate(-1, 0)
 		case "right", "l":
+			m.navigate(1, 0)
+		case "shift+left", "shift+h":
+			m.move(-1)
+		case "shift+right", "shift+l":
 			m.move(1)
 		case "up", "k":
-			if m.focus > 0 {
-				m.focus--
-			}
+			m.navigate(0, -1)
 		case "down", "j":
-			if m.focus < len(m.dashboard.Widgets)-1 {
-				m.focus++
-			}
+			m.navigate(0, 1)
 		case "r":
 			m.defaults()
 		}
@@ -100,16 +100,88 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	return m, nil
 }
+
+func (m *tuiModel) navigate(dx, dy int) {
+	if m.focus < 0 || m.focus >= len(m.dashboard.Widgets) {
+		return
+	}
+	positions := m.positions()
+	from := positions[m.dashboard.Widgets[m.focus].ID]
+	best, found := m.focus, false
+	bestDistance := int(^uint(0) >> 1)
+	for i, w := range m.dashboard.Widgets {
+		p, ok := positions[w.ID]
+		if !ok || i == m.focus {
+			continue
+		}
+		if dy != 0 {
+			if (dy > 0 && p.y <= from.y) || (dy < 0 && p.y >= from.y) {
+				continue
+			}
+			distance := abs(p.y-from.y)*100 + abs(p.x-from.x)
+			if distance < bestDistance {
+				best, bestDistance, found = i, distance, true
+			}
+		} else if dx != 0 && p.y == from.y {
+			if (dx > 0 && p.x <= from.x) || (dx < 0 && p.x >= from.x) {
+				continue
+			}
+			distance := abs(p.x - from.x)
+			if distance < bestDistance {
+				best, bestDistance, found = i, distance, true
+			}
+		}
+	}
+	if found {
+		m.focus = best
+	}
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+type tuiPosition struct{ x, y int }
+
+func (m tuiModel) positions() map[string]tuiPosition {
+	groups := map[string][]widget{}
+	for _, w := range m.dashboard.Widgets {
+		groups[w.Group] = append(groups[w.Group], w)
+	}
+	keys := make([]string, 0, len(groups))
+	for k := range groups {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	columns := 2
+	if m.width > 0 && m.width < 90 {
+		columns = 1
+	}
+	positions := make(map[string]tuiPosition, len(m.dashboard.Widgets))
+	row := 0
+	for _, group := range keys {
+		for i, w := range groups[group] {
+			positions[w.ID] = tuiPosition{x: i % columns, y: row + i/columns}
+		}
+		row += (len(groups[group])+columns-1)/columns + 1
+	}
+	return positions
+}
 func (m *tuiModel) toggle(id string) {
 	for i, v := range m.selected {
 		if v == id {
 			m.selected = append(m.selected[:i], m.selected[i+1:]...)
 			m.save()
+			m.dashboard = m.apply(m.available)
 			return
 		}
 	}
 	m.selected = append(m.selected, id)
 	m.save()
+	m.dashboard = m.apply(m.available)
 }
 func (m *tuiModel) remove() {
 	if m.focus < len(m.dashboard.Widgets) {
@@ -120,6 +192,7 @@ func (m *tuiModel) remove() {
 		if m.focus < 0 {
 			m.focus = 0
 		}
+		m.dashboard = m.apply(m.available)
 	}
 }
 func (m *tuiModel) move(delta int) {
@@ -130,6 +203,7 @@ func (m *tuiModel) move(delta int) {
 	m.selected[m.focus], m.selected[j] = m.selected[j], m.selected[m.focus]
 	m.focus = j
 	m.save()
+	m.dashboard = m.apply(m.available)
 }
 func (m *tuiModel) defaults() {
 	m.selected = nil
@@ -140,6 +214,8 @@ func (m *tuiModel) defaults() {
 	}
 	m.focus = 0
 	m.save()
+	m.available = buildDashboard(m.collector.snapshot())
+	m.dashboard = m.apply(m.available)
 }
 func (m tuiModel) apply(d dashboard) dashboard {
 	if m.selected == nil {
@@ -191,6 +267,7 @@ var (
 	tuiTitle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4"))
 	tuiGroup = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#04B575"))
 	tuiCard  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#444444")).Padding(0, 1)
+	tuiFocus = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#FFFFFF")).Padding(0, 1)
 	tuiDim   = lipgloss.NewStyle().Foreground(lipgloss.Color("#777777"))
 )
 
@@ -221,9 +298,9 @@ func (m tuiModel) View() string {
 		b.WriteByte('\n')
 		cards := make([]string, 0, len(groups[group]))
 		for _, w := range groups[group] {
-			card := renderTUICard(w)
-			if m.picker && m.focus < len(m.dashboard.Widgets) && m.dashboard.Widgets[m.focus].ID == w.ID {
-				card = lipgloss.NewStyle().Border(lipgloss.DoubleBorder()).Render(card)
+			card := tuiCard.Render(renderTUICard(w))
+			if m.focus < len(m.dashboard.Widgets) && m.dashboard.Widgets[m.focus].ID == w.ID {
+				card = tuiFocus.Render(renderTUICard(w))
 			}
 			cards = append(cards, card)
 		}
@@ -276,5 +353,5 @@ func renderTUICard(w widget) string {
 	if w.Note != "" {
 		text += "\n" + tuiDim.Render(w.Note)
 	}
-	return tuiCard.Render(text)
+	return text
 }
