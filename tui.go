@@ -32,6 +32,8 @@ type tuiModel struct {
 	picker               bool
 	pickerGroup          int
 	pickerGroups         []string
+	searchMode           bool
+	searchQuery          string
 	ready                bool
 	layouts              []tuiNamedLayout
 	activeLayout         string
@@ -64,6 +66,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateLoad(msg)
 		}
 		if m.picker {
+			if m.searchMode {
+				return m.updatePickerSearch(msg)
+			}
 			switch msg.String() {
 			case "esc", "a", "q":
 				m.picker = false
@@ -90,6 +95,10 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if len(widgets) > 0 {
 					m.toggle(widgets[m.focus].ID)
 				}
+			case "/":
+				m.searchMode = true
+				m.searchQuery = ""
+				m.focus = 0
 			}
 			return m, nil
 		}
@@ -165,6 +174,24 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m tuiModel) updatePickerSearch(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "enter", "/":
+		m.searchMode = false
+	case "backspace":
+		if len(m.searchQuery) > 0 {
+			m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
+			m.focus = 0
+		}
+	default:
+		if len(msg.String()) == 1 {
+			m.searchQuery += msg.String()
+			m.focus = 0
+		}
+	}
+	return m, nil
+}
+
 func (m tuiModel) availableGroups() []string {
 	groups := map[string]bool{}
 	for _, w := range m.available.Widgets {
@@ -179,13 +206,24 @@ func (m tuiModel) availableGroups() []string {
 	return append(out, names...)
 }
 func (m tuiModel) pickerWidgets() []widget {
-	if m.pickerGroup <= 0 || m.pickerGroup >= len(m.pickerGroups) {
-		return m.available.Widgets
+	group := ""
+	if m.pickerGroup > 0 && m.pickerGroup < len(m.pickerGroups) {
+		group = m.pickerGroups[m.pickerGroup]
 	}
-	group := m.pickerGroups[m.pickerGroup]
 	out := make([]widget, 0)
 	for _, w := range m.available.Widgets {
-		if w.Group == group {
+		if group != "" && w.Group != group {
+			continue
+		}
+		searchable := strings.ToLower(w.Title + " " + w.Group + " " + w.Note)
+		match := true
+		for _, term := range strings.Fields(strings.ToLower(m.searchQuery)) {
+			if !strings.Contains(searchable, term) {
+				match = false
+				break
+			}
+		}
+		if match {
 			out = append(out, w)
 		}
 	}
@@ -549,19 +587,27 @@ func (m tuiModel) pickerView() string {
 		}
 	}
 	b.WriteString("\n\n")
-	b.WriteString(tuiDim.Render("←/→ or Tab groups • ↑/↓ choose • Enter toggle • Esc close"))
+	b.WriteString(tuiDim.Render("←/→ or Tab groups • ↑/↓ choose • Enter toggle • / search • Esc close"))
 	b.WriteString("\n\n")
-	for i, w := range m.pickerWidgets() {
-		marker := "  "
+	widgets := m.pickerWidgets()
+	if len(widgets) == 0 {
+		b.WriteString(tuiDim.Render("No matching widgets."))
+		b.WriteString("\n\n")
+	}
+	for i, w := range widgets {
+		marker := " "
 		for _, id := range m.selected {
 			if id == w.ID {
-				marker = "✓ "
+				marker = "✓"
 			}
 		}
 		if i == m.focus {
-			marker = ">" + marker[1:]
+			marker = ">"
 		}
 		fmt.Fprintf(&b, "%s%-30s %s\n", marker, w.Title, tuiDim.Render(w.Group))
+	}
+	if m.searchMode {
+		b.WriteString("\n" + tuiTitle.Render("/"+m.searchQuery+"_"))
 	}
 	return b.String()
 }
