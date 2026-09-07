@@ -67,8 +67,28 @@ func TestDashboardMetrics(t *testing.T) {
 	if len(days) != 2 || days[0].Percent != 100 || days[1].Percent != 0 {
 		t.Fatalf("bad daily chart: %+v", days)
 	}
-	if strings.Contains(w.Body.String(), "OpenRouter") {
-		t.Fatal("OpenRouter placeholder remains")
+	if !strings.Contains(w.Body.String(), "OpenRouter") {
+		t.Fatal("configured OpenRouter widgets are missing")
+	}
+	if len(configuredWidgetCatalog.Widgets) < 20 {
+		t.Fatalf("widget catalog unexpectedly small: %d", len(configuredWidgetCatalog.Widgets))
+	}
+	for _, c := range configuredWidgetCatalog.Widgets {
+		if c.Group != "Codex" && c.Group != "OpenRouter" {
+			t.Fatalf("unexpected widget group %q", c.Group)
+		}
+	}
+	openRouterURLs := 0
+	for _, c := range configuredWidgetCatalog.Widgets {
+		if c.Group == "OpenRouter" {
+			if c.Logic.Type != "url" || c.Logic.URL == "" || c.Logic.Method == "" {
+				t.Fatalf("OpenRouter widget is missing URL logic: %+v", c)
+			}
+			openRouterURLs++
+		}
+	}
+	if openRouterURLs == 0 {
+		t.Fatal("widget catalog has no OpenRouter definitions")
 	}
 }
 func TestWidgetIDsSurviveMissingData(t *testing.T) {

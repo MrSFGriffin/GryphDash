@@ -1,0 +1,277 @@
+{
+  "widgets": [
+    {
+      "id": "codex/bucket/{bucket}/primary",
+      "group": "Codex",
+      "name": "Primary limit",
+      "description": "Remaining percentage in the primary quota window",
+      "scope": "limitBuckets",
+      "default": true,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "limitWindow", "path": "primary", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/secondary",
+      "group": "Codex",
+      "name": "Secondary limit",
+      "description": "Remaining percentage in the secondary quota window",
+      "scope": "limitBuckets",
+      "default": true,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "limitWindow", "path": "secondary", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/credits/balance",
+      "group": "Codex",
+      "name": "Credits remaining",
+      "description": "Spendable credits · not USD",
+      "scope": "limitBuckets",
+      "default": true,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "credits.balance", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/credits/hasCredits",
+      "group": "Codex",
+      "name": "Credits available",
+      "description": "Whether the account has spendable credits",
+      "scope": "limitBuckets",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "credits.hasCredits", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/credits/unlimited",
+      "group": "Codex",
+      "name": "Unlimited credits",
+      "description": "Provider-reported credit status",
+      "scope": "limitBuckets",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "credits.unlimited", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/planType",
+      "group": "Codex",
+      "name": "Bucket plan",
+      "description": "Plan associated with this limit bucket",
+      "scope": "limitBuckets",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "planType", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/limitName",
+      "group": "Codex",
+      "name": "Limit name",
+      "description": "Optional provider label for this limit bucket",
+      "scope": "limitBuckets",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "limitName", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/spendControlReached",
+      "group": "Codex",
+      "name": "Spend control reached",
+      "description": "Provider-reported spend-control state",
+      "scope": "limitBuckets",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "spendControlReached", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/rateLimitReachedType",
+      "group": "Codex",
+      "name": "Reached-limit state",
+      "description": "Provider-reported limit state",
+      "scope": "limitBuckets",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "rateLimitReachedType", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/individual/limit",
+      "group": "Codex",
+      "name": "Individual spend allowance",
+      "description": "Provider-reported units",
+      "scope": "limitBuckets",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "individualLimit.limit", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/individual/used",
+      "group": "Codex",
+      "name": "Individual spend used",
+      "description": "Provider-reported units",
+      "scope": "limitBuckets",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "individualLimit.used", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/individual/remainingPercent",
+      "group": "Codex",
+      "name": "Individual spend remaining",
+      "description": "Provider-reported percent",
+      "scope": "limitBuckets",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "individualLimit.remainingPercent", "source": "limits" }
+    },
+    {
+      "id": "codex/bucket/{bucket}/individual/resetsAt",
+      "group": "Codex",
+      "name": "Individual spend reset",
+      "description": "UTC reset time",
+      "scope": "limitBuckets",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "timestamp", "path": "individualLimit.resetsAt", "source": "limits" }
+    },
+    {
+      "id": "codex/resets/count",
+      "group": "Codex",
+      "name": "Available resets",
+      "description": "Earned resets are separate from spendable credits",
+      "default": true,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "rateLimitResetCredits.availableCount", "source": "limits" }
+    },
+    {
+      "id": "codex/resets/details",
+      "group": "Codex",
+      "name": "Earned reset details",
+      "description": "Read only · the provider may return fewer details than the available count",
+      "default": false,
+      "width": 8,
+      "height": 6,
+      "logic": { "type": "resetDetails", "path": "rateLimitResetCredits", "source": "limits" }
+    },
+    {
+      "id": "codex/usage/lifetimeTokens",
+      "group": "Codex",
+      "name": "Lifetime tokens",
+      "description": "tokens",
+      "default": true,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "summary.lifetimeTokens", "source": "usage" }
+    },
+    {
+      "id": "codex/usage/peakDailyTokens",
+      "group": "Codex",
+      "name": "Peak daily tokens",
+      "description": "tokens",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "summary.peakDailyTokens", "source": "usage" }
+    },
+    {
+      "id": "codex/usage/longestRunningTurnSec",
+      "group": "Codex",
+      "name": "Longest-running turn",
+      "description": "seconds",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "summary.longestRunningTurnSec", "source": "usage" }
+    },
+    {
+      "id": "codex/usage/currentStreakDays",
+      "group": "Codex",
+      "name": "Current streak",
+      "description": "days",
+      "default": true,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "summary.currentStreakDays", "source": "usage" }
+    },
+    {
+      "id": "codex/usage/longestStreakDays",
+      "group": "Codex",
+      "name": "Longest streak",
+      "description": "days",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "summary.longestStreakDays", "source": "usage" }
+    },
+    {
+      "id": "codex/usage/daily",
+      "group": "Codex",
+      "name": "Daily token activity",
+      "description": "Dates as returned by Codex; missing dates are not filled with zero",
+      "default": true,
+      "width": 8,
+      "height": 6,
+      "logic": { "type": "daily", "path": "dailyUsageBuckets", "source": "usage" }
+    },
+    {
+      "id": "codex/account/plan",
+      "group": "Codex",
+      "name": "Account plan",
+      "description": "ChatGPT subscription",
+      "default": true,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "account.planType", "source": "account" }
+    },
+    {
+      "id": "codex/account/auth",
+      "group": "Codex",
+      "name": "Authentication",
+      "description": "Local Codex login",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "path": "account.type", "source": "account" }
+    },
+    {
+      "id": "openrouter/spend",
+      "group": "OpenRouter",
+      "name": "Spend this month",
+      "description": "Requires an OpenRouter usage endpoint and credential",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "url", "source": "openrouter", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+    },
+    {
+      "id": "openrouter/budget",
+      "group": "OpenRouter",
+      "name": "Budget remaining",
+      "description": "Requires an OpenRouter usage endpoint and configured budget",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "url", "source": "openrouter", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+    },
+    {
+      "id": "openrouter/credits",
+      "group": "OpenRouter",
+      "name": "Credit balance",
+      "description": "Requires an OpenRouter credits endpoint and credential",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "url", "source": "openrouter", "url": "https://openrouter.ai/api/v1/credits", "method": "GET" }
+    }
+  ]
+}

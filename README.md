@@ -3,7 +3,10 @@
 A customizable widget dashboard for live Codex usage and limits. The Go server
 uses only the standard library and embeds all HTML, CSS, and JavaScript, including
 GridStack, in a single executable. Live metrics require the Codex CLI on the same
-machine. OpenRouter integration is planned for later.
+machine. Widget definitions live in the embedded [`widgets.json`](widgets.json)
+catalog, so adding a metric does not require editing the dashboard renderer.
+OpenRouter definitions are included for later integration but are unavailable
+until its adapter is implemented.
 
 ## Run
 
@@ -48,6 +51,21 @@ stays in place and shows an unavailable state.
 Limits, balances, activity summaries, and account fields are individual widgets.
 Daily activity and earned-reset details have larger dedicated widgets. A small
 initial selection is shown; all other metrics can be added from the picker.
+
+## Widget catalog
+
+`widgets.json` is the source of truth for the widget picker. Each definition has a
+stable `id`, `group`, display `name`, user-facing `description`, default layout
+size/visibility, and `logic`. Logic names are interpreted by the server: `scalar`
+reads a dotted field from an account, limits, or usage response; `limitWindow`
+adds remaining percentage and reset handling for a limit bucket; `daily` and
+`resetDetails` render structured lists; `timestamp` formats Unix timestamps; and
+`url` records the future HTTP source without making a request yet. Definitions
+with `scope: "limitBuckets"` expand once for every provider-returned bucket.
+
+The server validates required catalog fields at startup and embeds the JSON in the
+binary. Keep IDs stable when changing names or descriptions so users' saved
+browser layouts continue to work.
 
 ## Metrics
 

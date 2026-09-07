@@ -10,6 +10,9 @@
 - GridStack widgets with a searchable picker, drag/resize editing, keyboard
   controls, browser-local layout persistence, and mobile adaptation.
 - In-place metric refresh and ticking reset countdowns.
+- Declarative embedded `widgets.json` catalog with groups, descriptions, stable
+  IDs, and typed logic for scalar, limit-window, daily, reset-detail, timestamp,
+  and future URL-backed widgets.
 - Protocol, partial-failure, cancellation, widget API, and browser interaction
   tests, plus standalone build instructions.
 

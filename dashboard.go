@@ -1,12 +1,40 @@
 package main
 
 import (
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
+
+//go:embed widgets.json
+var widgetConfigData []byte
+
+type widgetLogic struct {
+	Type   string `json:"type"`
+	Source string `json:"source,omitempty"`
+	Path   string `json:"path,omitempty"`
+	URL    string `json:"url,omitempty"`
+	Method string `json:"method,omitempty"`
+}
+type widgetConfig struct {
+	ID          string      `json:"id"`
+	Group       string      `json:"group"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Scope       string      `json:"scope,omitempty"`
+	Default     bool        `json:"default"`
+	Width       int         `json:"width"`
+	Height      int         `json:"height"`
+	Logic       widgetLogic `json:"logic"`
+}
+type widgetCatalog struct {
+	Widgets []widgetConfig `json:"widgets"`
+}
 
 type day struct {
 	Date    string  `json:"date"`
@@ -22,9 +50,6 @@ type resetCredit struct {
 	Granted     string `json:"granted"`
 	Expires     string `json:"expires"`
 }
-
-// IDs describe the source field, not its current label, value, or list position.
-// Browser layouts can therefore survive missing data and quota-window changes.
 type widget struct {
 	ID       string        `json:"id"`
 	Title    string        `json:"title"`
@@ -44,6 +69,21 @@ type widget struct {
 type dashboard struct {
 	Widgets []widget `json:"widgets"`
 }
+
+func loadWidgetCatalog() widgetCatalog {
+	var catalog widgetCatalog
+	if err := json.Unmarshal(widgetConfigData, &catalog); err != nil {
+		panic(fmt.Sprintf("invalid widgets.json: %v", err))
+	}
+	for i, w := range catalog.Widgets {
+		if w.ID == "" || w.Group == "" || w.Name == "" || w.Description == "" || w.Logic.Type == "" || w.Width < 1 || w.Height < 2 {
+			panic(fmt.Sprintf("invalid widget definition at index %d", i))
+		}
+	}
+	return catalog
+}
+
+var configuredWidgetCatalog = loadWidgetCatalog()
 
 func object(v any) map[string]any { m, _ := v.(map[string]any); return m }
 func value(v any) string {
@@ -86,13 +126,36 @@ func status(r result) string {
 	}
 	return text
 }
-func scalar(id, title, group string, v any, note string, r result, visible bool) widget {
-	return widget{ID: id, Title: title, Group: group, Kind: "metric", Value: value(v), Note: note, Status: status(r), Default: visible, Width: 4, Height: 4}
+func pathValue(root map[string]any, path string) any {
+	var current any = root
+	for _, part := range strings.Split(path, ".") {
+		m, ok := current.(map[string]any)
+		if !ok {
+			return nil
+		}
+		current = m[part]
+	}
+	return current
 }
-func limitWidget(id, title, group string, v any, r result, visible bool) widget {
-	m := object(v)
-	w := scalar(id, title, group, nil, "Window not returned", r, visible)
+func sourceResult(logic widgetLogic, s snapshot) result {
+	switch logic.Source {
+	case "account":
+		return s.Account
+	case "limits":
+		return s.Limits
+	case "usage":
+		return s.Usage
+	}
+	return result{}
+}
+func configWidget(c widgetConfig, id, group string, raw any, r result) widget {
+	return widget{ID: id, Title: c.Name, Group: group, Kind: c.Logic.Type, Value: value(raw), Note: c.Description, Status: status(r), Default: c.Default, Width: c.Width, Height: c.Height}
+}
+func limitWidget(c widgetConfig, id, group string, raw any, r result) widget {
+	w := configWidget(c, id, group, nil, r)
+	m := object(raw)
 	if m == nil {
+		w.Note = c.Description + " · Window not returned"
 		return w
 	}
 	if mins, ok := m["windowDurationMins"].(float64); ok {
@@ -109,9 +172,9 @@ func limitWidget(id, title, group string, v any, r result, visible bool) widget 
 		remaining := 100 - used
 		w.Value = fmt.Sprintf("%g%%", remaining)
 		w.Percent = &remaining
-		w.Note = fmt.Sprintf("Remaining · %g%% used", used)
+		w.Note = fmt.Sprintf("%s · %g%% used", c.Description, used)
 	} else {
-		w.Note = "Usage percentage unavailable"
+		w.Note = c.Description + " · Usage percentage unavailable"
 	}
 	if seconds, ok := m["resetsAt"].(float64); ok {
 		n := int64(seconds)
@@ -121,73 +184,35 @@ func limitWidget(id, title, group string, v any, r result, visible bool) widget 
 	}
 	return w
 }
-func buildDashboard(s snapshot) dashboard {
-	out := dashboard{Widgets: []widget{}}
-	add := func(w widget) { out.Widgets = append(out.Widgets, w) }
-	buckets := object(s.Limits.Data["rateLimitsByLimitId"])
-	if len(buckets) == 0 {
-		buckets = map[string]any{"codex": s.Limits.Data["rateLimits"]}
+func staticWidget(c widgetConfig, s snapshot) widget {
+	r := sourceResult(c.Logic, s)
+	if c.Logic.Type == "url" {
+		return configWidget(c, c.ID, c.Group, nil, r)
 	}
-	keys := make([]string, 0, len(buckets))
-	for k := range buckets {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		b := object(buckets[key])
-		prefix := "codex/bucket/" + url.PathEscape(key) + "/"
-		group := "Codex · " + key
-		primary := key == "codex"
-		add(limitWidget(prefix+"primary", "Primary limit", group, b["primary"], s.Limits, primary))
-		add(limitWidget(prefix+"secondary", "Secondary limit", group, b["secondary"], s.Limits, primary))
-		credits := object(b["credits"])
-		add(scalar(prefix+"credits/balance", "Credits remaining", group, credits["balance"], "Spendable credits · not USD", s.Limits, primary))
-		add(scalar(prefix+"credits/hasCredits", "Credits available", group, credits["hasCredits"], "Whether the account has spendable credits", s.Limits, false))
-		add(scalar(prefix+"credits/unlimited", "Unlimited credits", group, credits["unlimited"], "Provider-reported credit status", s.Limits, false))
-		for _, f := range []struct{ key, title string }{{"planType", "Bucket plan"}, {"limitName", "Limit name"}, {"spendControlReached", "Spend control reached"}, {"rateLimitReachedType", "Reached-limit state"}} {
-			v := b[f.key]
-			if f.key == "rateLimitReachedType" && b != nil && v == nil {
-				v = "None reported"
-			}
-			add(scalar(prefix+f.key, f.title, group, v, "", s.Limits, false))
-		}
-		individual := object(b["individualLimit"])
-		for _, f := range []struct{ key, title, note string }{{"limit", "Individual spend allowance", "Provider-reported units"}, {"used", "Individual spend used", "Provider-reported units"}, {"remainingPercent", "Individual spend remaining", "Percent"}, {"resetsAt", "Individual spend reset", "UTC"}} {
-			var v any = individual[f.key]
-			if f.key == "resetsAt" {
-				v = timestamp(v)
-			}
-			add(scalar(prefix+"individual/"+f.key, f.title, group, v, f.note, s.Limits, false))
-		}
-	}
-	resets := object(s.Limits.Data["rateLimitResetCredits"])
-	add(scalar("codex/resets/count", "Available resets", "Earned resets", resets["availableCount"], "Earned resets are separate from spendable credits", s.Limits, true))
-	detail := scalar("codex/resets/details", "Earned reset details", "Earned resets", nil, "Read only · the provider may return fewer details than the available count", s.Limits, false)
-	detail.Kind = "resets"
-	detail.Width = 8
-	detail.Height = 6
-	if rows, ok := resets["credits"].([]any); ok {
-		detail.Value = fmt.Sprintf("%d reset details returned", len(rows))
+	raw := pathValue(r.Data, c.Logic.Path)
+	w := configWidget(c, c.ID, c.Group, raw, r)
+	switch c.Logic.Type {
+	case "resetDetails":
+		w.Kind = "resets"
+		w.Width = 8
+		w.Height = 6
+		resets := object(raw)
+		rows, _ := resets["credits"].([]any)
+		w.Value = fmt.Sprintf("%d reset details returned", len(rows))
 		for _, row := range rows {
 			m := object(row)
 			expires := timestamp(m["expiresAt"])
 			if m["expiresAt"] == nil {
 				expires = "No expiration"
 			}
-			detail.Resets = append(detail.Resets, resetCredit{value(m["id"]), value(m["title"]), value(m["description"]), value(m["status"]), value(m["resetType"]), timestamp(m["grantedAt"]), expires})
+			w.Resets = append(w.Resets, resetCredit{value(m["id"]), value(m["title"]), value(m["description"]), value(m["status"]), value(m["resetType"]), timestamp(m["grantedAt"]), expires})
 		}
-	}
-	add(detail)
-	summary := object(s.Usage.Data["summary"])
-	for _, f := range []struct{ key, title, unit string }{{"lifetimeTokens", "Lifetime tokens", "tokens"}, {"peakDailyTokens", "Peak daily tokens", "tokens"}, {"longestRunningTurnSec", "Longest-running turn", "seconds"}, {"currentStreakDays", "Current streak", "days"}, {"longestStreakDays", "Longest streak", "days"}} {
-		add(scalar("codex/usage/"+f.key, f.title, "Token activity", summary[f.key], f.unit, s.Usage, f.key == "lifetimeTokens" || f.key == "currentStreakDays"))
-	}
-	daily := scalar("codex/usage/daily", "Daily token activity", "Token activity", nil, "Dates as returned by Codex; missing dates are not filled with zero", s.Usage, true)
-	daily.Kind = "daily"
-	daily.Width = 8
-	daily.Height = 6
-	if rows, ok := s.Usage.Data["dailyUsageBuckets"].([]any); ok {
-		daily.Value = fmt.Sprintf("%d days returned", len(rows))
+	case "daily":
+		w.Kind = "daily"
+		w.Width = 8
+		w.Height = 6
+		rows, _ := raw.([]any)
+		w.Value = fmt.Sprintf("%d days returned", len(rows))
 		max := float64(0)
 		for _, row := range rows {
 			n, _ := object(row)["tokens"].(float64)
@@ -202,13 +227,46 @@ func buildDashboard(s snapshot) dashboard {
 			if max > 0 {
 				pct = 100 * n / max
 			}
-			daily.Days = append(daily.Days, day{value(m["startDate"]), value(m["tokens"]), pct})
+			w.Days = append(w.Days, day{value(m["startDate"]), value(m["tokens"]), pct})
 		}
-		sort.Slice(daily.Days, func(i, j int) bool { return daily.Days[i].Date > daily.Days[j].Date })
+		sort.Slice(w.Days, func(i, j int) bool { return w.Days[i].Date > w.Days[j].Date })
+	case "timestamp":
+		w.Value = timestamp(raw)
 	}
-	add(daily)
-	account := object(s.Account.Data["account"])
-	add(scalar("codex/account/plan", "Account plan", "Account", account["planType"], "ChatGPT subscription", s.Account, true))
-	add(scalar("codex/account/auth", "Authentication", "Account", account["type"], "Local Codex login", s.Account, false))
+	return w
+}
+func bucketID(template, bucket string) string {
+	return strings.ReplaceAll(template, "{bucket}", url.PathEscape(bucket))
+}
+func buildDashboard(s snapshot) dashboard {
+	out := dashboard{Widgets: []widget{}}
+	buckets := object(s.Limits.Data["rateLimitsByLimitId"])
+	if len(buckets) == 0 {
+		buckets = map[string]any{"codex": s.Limits.Data["rateLimits"]}
+	}
+	keys := make([]string, 0, len(buckets))
+	for k := range buckets {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, c := range configuredWidgetCatalog.Widgets {
+		if c.Scope == "limitBuckets" {
+			for _, key := range keys {
+				b := object(buckets[key])
+				copy := c
+				copy.Default = c.Default && key == "codex"
+				group := c.Group + " · " + key
+				id := bucketID(c.ID, key)
+				raw := pathValue(b, c.Logic.Path)
+				if c.Logic.Type == "limitWindow" {
+					out.Widgets = append(out.Widgets, limitWidget(copy, id, group, raw, s.Limits))
+				} else {
+					out.Widgets = append(out.Widgets, configWidget(copy, id, group, raw, s.Limits))
+				}
+			}
+			continue
+		}
+		out.Widgets = append(out.Widgets, staticWidget(c, s))
+	}
 	return out
 }
