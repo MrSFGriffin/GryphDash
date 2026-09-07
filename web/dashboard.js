@@ -9,6 +9,7 @@
   let editing = false;
   let restoring = false;
   let grid;
+  let pickerGroup = 'All';
 
   function element(tag, className, text) {
     const el = document.createElement(tag);
@@ -177,12 +178,22 @@
     document.querySelectorAll('.widget-heading').forEach(el => { el.tabIndex = on ? 0 : -1; });
   }
   function renderPicker() {
-    const query = $('widget-search').value.trim().toLowerCase();
+    const query = $('widget-search').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const active = activeIDs();
     const list = $('widget-list'); list.replaceChildren();
+    const groupNames = [...new Set([...catalog.values()].map(w => w.group))].sort();
+    const tabs = $('picker-tabs'); tabs.replaceChildren();
+    for (const name of ['All', ...groupNames]) {
+      const tab = element('button', name === pickerGroup ? 'picker-tab active' : 'picker-tab', name);
+      tab.type = 'button'; tab.setAttribute('role', 'tab'); tab.setAttribute('aria-selected', String(name === pickerGroup));
+      tab.addEventListener('click', () => { pickerGroup = name; renderPicker(); });
+      tabs.append(tab);
+    }
     const groups = new Map();
     for (const w of catalog.values()) {
-      if (!`${w.title} ${w.group}`.toLowerCase().includes(query)) continue;
+      if (pickerGroup !== 'All' && w.group !== pickerGroup) continue;
+      const searchable = `${w.title} ${w.group} ${w.description || ''}`.toLowerCase();
+      if (!query.every(term => searchable.includes(term))) continue;
       if (!groups.has(w.group)) groups.set(w.group, []);
       groups.get(w.group).push(w);
     }
@@ -208,6 +219,7 @@
   $('add-widgets').addEventListener('click', openPicker);
   $('empty-add').addEventListener('click', openPicker);
   $('close-picker').addEventListener('click', () => picker.close());
+  picker.addEventListener('click', event => { if (event.target === picker) picker.close(); });
   $('widget-search').addEventListener('input', renderPicker);
   $('edit-layout').addEventListener('click', () => setEditing(!editing));
   $('restore-defaults').addEventListener('click', () => { loadDefaults(); saveLayout(); emptyState(); updateCountdowns(); });
