@@ -1,9 +1,9 @@
 # GryphDash
 
-A personal dashboard for live Codex usage and limits, with clearly labeled
-OpenRouter demo data. The Go server embeds its HTML and CSS in a single executable
-and uses only the standard library. Live Codex metrics additionally require the
-Codex CLI on the same machine.
+A customizable widget dashboard for live Codex usage and limits. The Go server
+uses only the standard library and embeds all HTML, CSS, and JavaScript, including
+GridStack, in a single executable. Live metrics require the Codex CLI on the same
+machine. OpenRouter integration is planned for later.
 
 ## Run
 
@@ -21,15 +21,39 @@ is needed. Codex manages its own credentials; do not copy `auth.json` into this
 repository. An API-key-only login does not provide these subscription metrics.
 
 Open <http://127.0.0.1:8080>. Stop with Ctrl+C. The first read runs in the background;
-the page refreshes every minute. Only one polling cycle runs at a time, with a
+widget values refresh in place every 15 seconds from the server cache. Provider
+reads run about once per minute by default. Only one polling cycle runs at a time, with a
 45-second timeout. Each cycle starts a local `codex app-server` over stdin/stdout,
 reads metrics, and stops it. No model tasks are started or earned resets redeemed.
+
+## Customize your dashboard
+
+- **Add widgets** opens a searchable picker of every available Codex metric.
+- **Edit dashboard** enables dragging by a widget heading, corner resizing, and
+  removal with the × button. Removed widgets remain available in the picker.
+- For keyboard editing, Tab to a widget heading and use arrow keys to move it;
+  Shift + arrow keys changes its size. **Done editing** locks the arrangement.
+- **Restore defaults**, available while editing, restores the initial selection.
+- Layout and widget selection save automatically in this browser's `localStorage`
+  under `gryphdash.layout.v1`. They survive page reloads and server restarts, and
+  an intentionally empty dashboard stays empty. Storage contains only widget IDs
+  and positions/sizes. It does not store metrics or credentials.
+
+Layouts are specific to the browser and origin (including port); they do not sync
+between devices. If storage is blocked or corrupt, the dashboard remains usable
+and displays a message. The grid adapts to mobile screens without overwriting the
+saved desktop arrangement. A saved widget whose source temporarily disappears
+stays in place and shows an unavailable state.
+
+Limits, balances, activity summaries, and account fields are individual widgets.
+Daily activity and earned-reset details have larger dedicated widgets. A small
+initial selection is shown; all other metrics can be added from the picker.
 
 ## Metrics
 
 - Account plan and authentication type.
 - All returned limit buckets, including five-hour and weekly usage percentages,
-  remaining percentages, reset timestamps, and countdowns at page render time.
+  remaining percentages, reset timestamps, and ticking reset countdowns.
 - Credit balance, credit availability, and unlimited-credit status.
 - Per-bucket plan, label, reached-limit state, spend-control status, and individual
   spend limits when supplied (including used amount, allowance, remaining
@@ -46,7 +70,7 @@ Account, limits, and activity refresh independently within each polling cycle.
 Successful sections remain usable when another fails. Failed reads preserve the
 last successful data and show a stale status; missing fields say `Unavailable`.
 A zero balance or streak is displayed as zero. Times are UTC. Codex data is kept
-in memory, so restarting clears the cache. OpenRouter is not connected yet.
+in memory, so restarting clears the metric cache but not the browser layout.
 
 The adapter uses the documented [`account/read`, `account/rateLimits/read`, and
 `account/usage/read`](https://learn.chatgpt.com/docs/app-server) methods. It was
@@ -86,6 +110,29 @@ With a C compiler installed, also run `CGO_ENABLED=1 go test -race ./...`.
 
 The binary runs from any directory without templates or other source files.
 The Codex CLI and its login must still be available. Rebuild after changing the
-embedded page in `web/dashboard.html`.
+embedded assets in `web/`. GridStack 13.2.0 is vendored with its MIT license in
+`web/vendor/gridstack/`; no CDN access or Node.js installation is needed to run
+or build the server. `/api/widgets` serves the cached widget catalog and values;
+visiting it does not trigger a provider read.
+
+## Browser tests (optional development tools)
+
+`tests/browser.mjs` exercises adding/removing widgets, pointer dragging/resizing,
+keyboard resizing, reload persistence, live updates, mobile layout, empty layouts,
+and storage failure recovery using fictional metrics. It starts its own server
+and does not use your Codex login. Build the binary first.
+
+Install Playwright and Chromium in a temporary directory, then run:
+
+```sh
+npm install --prefix /tmp/gryphdash-browser-tests --no-audit --no-fund playwright@1.58.2
+PLAYWRIGHT_BROWSERS_PATH=/tmp/gryphdash-browser-tests/browsers /tmp/gryphdash-browser-tests/node_modules/.bin/playwright install chromium
+GRYPHDASH_PLAYWRIGHT_MODULE=/tmp/gryphdash-browser-tests/node_modules/playwright/index.mjs PLAYWRIGHT_BROWSERS_PATH=/tmp/gryphdash-browser-tests/browsers node tests/browser.mjs
+```
+
+The host needs Chromium's system libraries. On Ubuntu 26.04, Playwright 1.58.2
+needs `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64` during browser installation
+and test execution to use its fallback build. Tests use port 18091 by default
+(override with `GRYPHDASH_TEST_PORT`). Screenshots are written under `/tmp`.
 
 See [PLAN.md](PLAN.md) for the remaining work.

@@ -1,10 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
-	_ "embed"
+	"embed"
+	"encoding/json"
 	"errors"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -13,14 +14,20 @@ import (
 	"time"
 )
 
-//go:embed web/dashboard.html
-var dashboardHTML string
+//go:embed web
+var webFiles embed.FS
 
 func newHandler(c *collector) http.Handler {
-	page := template.Must(template.New("dashboard").Parse(dashboardHTML))
-
+	assets := map[string]struct{ path, contentType string }{
+		"/":                         {"web/dashboard.html", "text/html; charset=utf-8"},
+		"/assets/dashboard.js":      {"web/dashboard.js", "text/javascript; charset=utf-8"},
+		"/assets/dashboard.css":     {"web/dashboard.css", "text/css; charset=utf-8"},
+		"/assets/gridstack-all.js":  {"web/vendor/gridstack/gridstack-all.js", "text/javascript; charset=utf-8"},
+		"/assets/gridstack.min.css": {"web/vendor/gridstack/gridstack.min.css", "text/css; charset=utf-8"},
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
+		asset, found := assets[r.URL.Path]
+		if !found && r.URL.Path != "/api/widgets" {
 			http.NotFound(w, r)
 			return
 		}
@@ -29,14 +36,25 @@ func newHandler(c *collector) http.Handler {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
-		if r.Method == http.MethodHead {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if r.URL.Path == "/api/widgets" {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			if r.Method == http.MethodHead {
+				return
+			}
+			if err := json.NewEncoder(w).Encode(buildDashboard(c.snapshot())); err != nil {
+				log.Printf("encode widgets: %v", err)
+			}
 			return
 		}
-		if err := page.Execute(w, buildDashboard(c.snapshot(), time.Now())); err != nil {
-			log.Printf("render dashboard: %v", err)
+		content, err := webFiles.ReadFile(asset.path)
+		if err != nil {
+			http.Error(w, "Asset unavailable", http.StatusInternalServerError)
+			return
 		}
+		w.Header().Set("Content-Type", asset.contentType)
+		http.ServeContent(w, r, asset.path, time.Time{}, bytes.NewReader(content))
 	})
 }
 

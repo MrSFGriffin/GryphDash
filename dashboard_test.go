@@ -27,47 +27,105 @@ func TestDashboardMetrics(t *testing.T) {
 	usage := fixture(t, `{"summary":{"lifetimeTokens":123,"currentStreakDays":0},"dailyUsageBuckets":[{"startDate":"2026-01-01","tokens":0},{"startDate":"2026-01-02","tokens":50}]}`)
 	c := &collector{state: snapshot{Limits: result{Data: limits, Updated: now}, Usage: result{Data: usage, Updated: now}}}
 	w := httptest.NewRecorder()
-	newHandler(c).ServeHTTP(w, httptest.NewRequest("GET", "/", nil))
+	newHandler(c).ServeHTTP(w, httptest.NewRequest("GET", "/api/widgets", nil))
 	if w.Code != 200 {
 		t.Fatal(w.Code)
 	}
-	for _, want := range []string{"5-hour limit", "Weekly limit", "75% remaining", "96% remaining", "Codex · other", "Credits remaining", "Available resets", "Lifetime tokens", "123", "2026-01-02", "Unavailable", "fictional examples"} {
-		if !strings.Contains(w.Body.String(), want) {
-			t.Errorf("missing %q", want)
+	var data dashboard
+	if err := json.Unmarshal(w.Body.Bytes(), &data); err != nil {
+		t.Fatal(err)
+	}
+	widgets := map[string]widget{}
+	for _, widget := range data.Widgets {
+		if _, exists := widgets[widget.ID]; exists {
+			t.Fatalf("duplicate widget ID %q", widget.ID)
+		}
+		widgets[widget.ID] = widget
+		if widget.Width < 1 || widget.Height < 2 {
+			t.Fatalf("invalid default size: %+v", widget)
 		}
 	}
-	data := buildDashboard(c.snapshot(), now)
-	var days []day
-	for _, p := range data.Providers {
-		if p.Name == "Token activity" {
-			days = p.Days
+	for id, want := range map[string]string{
+		"codex/bucket/codex/primary":            "75%",
+		"codex/bucket/codex/secondary":          "96%",
+		"codex/bucket/codex/credits/balance":    "0",
+		"codex/bucket/codex/credits/hasCredits": "No",
+		"codex/bucket/other/primary":            "90%",
+		"codex/resets/count":                    "2",
+		"codex/usage/lifetimeTokens":            "123",
+		"codex/usage/currentStreakDays":         "0",
+		"codex/usage/longestStreakDays":         "Unavailable",
+	} {
+		if got := widgets[id].Value; got != want {
+			t.Errorf("%s: got %q, want %q", id, got, want)
 		}
 	}
+	if widgets["codex/bucket/codex/primary"].Title != "5-hour limit" || widgets["codex/bucket/codex/secondary"].Title != "Weekly limit" {
+		t.Fatal("window titles")
+	}
+	days := widgets["codex/usage/daily"].Days
 	if len(days) != 2 || days[0].Percent != 100 || days[1].Percent != 0 {
 		t.Fatalf("bad daily chart: %+v", days)
 	}
+	if strings.Contains(w.Body.String(), "OpenRouter") {
+		t.Fatal("OpenRouter placeholder remains")
+	}
 }
-func TestNullZeroAndEscaping(t *testing.T) {
-	c := &collector{state: snapshot{Limits: result{Data: fixture(t, `{"rateLimits":{"credits":{"balance":"<script>alert(1)</script>","hasCredits":false}}}`)}}}
+func TestWidgetIDsSurviveMissingData(t *testing.T) {
+	missing := buildDashboard(snapshot{})
+	live := buildDashboard(snapshot{Limits: result{Data: fixture(t, `{"rateLimits":{"primary":{"usedPercent":1,"windowDurationMins":300},"individualLimit":{"limit":"50","used":"1","remainingPercent":98,"resetsAt":1700000000}},"rateLimitResetCredits":{"availableCount":1,"credits":[{"id":"reset-a","title":"A reset","expiresAt":null}]}}`)}})
+	ids := map[string]bool{}
+	for _, w := range live.Widgets {
+		ids[w.ID] = true
+	}
+	for _, w := range missing.Widgets {
+		if !ids[w.ID] {
+			t.Errorf("widget disappeared when data arrived: %s", w.ID)
+		}
+	}
+	if len(ids) != len(missing.Widgets) {
+		t.Fatal("catalog shape changed with optional data")
+	}
+	for _, w := range live.Widgets {
+		if w.ID == "codex/resets/details" && (len(w.Resets) != 1 || w.Resets[0].Expires != "No expiration") {
+			t.Fatal(w)
+		}
+	}
+}
+func TestNullZeroAndAssets(t *testing.T) {
+	c := &collector{state: snapshot{Limits: result{Data: fixture(t, `{"rateLimits":{"credits":{"balance":"<script>alert(1)</script>","hasCredits":false}},"accountId":"private-account-id"}`)}}}
 	w := httptest.NewRecorder()
-	newHandler(c).ServeHTTP(w, httptest.NewRequest("GET", "/", nil))
-	if strings.Contains(w.Body.String(), "<script>") {
-		t.Fatal("unescaped provider value")
+	newHandler(c).ServeHTTP(w, httptest.NewRequest("GET", "/api/widgets", nil))
+	if strings.Contains(w.Body.String(), "<script>") || strings.Contains(w.Body.String(), "private-account-id") {
+		t.Fatal("unsafe or unnecessary raw data in widget API")
 	}
 	if value(nil) != "Unavailable" || value(float64(0)) != "0" || value(false) != "No" {
 		t.Fatal("null and zero conflated")
 	}
-	for _, tc := range []struct {
-		method, path string
-		code         int
-	}{{"POST", "/", 405}, {"GET", "/missing", 404}, {"HEAD", "/", 200}} {
-		w := httptest.NewRecorder()
-		newHandler(c).ServeHTTP(w, httptest.NewRequest(tc.method, tc.path, nil))
-		if w.Code != tc.code {
-			t.Fatal(tc, w.Code)
+	for _, path := range []string{"/", "/api/widgets", "/assets/dashboard.js", "/assets/dashboard.css", "/assets/gridstack-all.js", "/assets/gridstack.min.css"} {
+		for _, method := range []string{"GET", "HEAD", "POST"} {
+			w := httptest.NewRecorder()
+			newHandler(c).ServeHTTP(w, httptest.NewRequest(method, path, nil))
+			want := 200
+			if method == "POST" {
+				want = 405
+			}
+			if w.Code != want {
+				t.Fatalf("%s %s: %d", method, path, w.Code)
+			}
+			if method == "HEAD" && w.Body.Len() != 0 {
+				t.Fatal("HEAD body")
+			}
+			if method == "GET" && (w.Body.Len() == 0 || w.Header().Get("Content-Type") == "") {
+				t.Fatal("missing embedded asset")
+			}
 		}
-		if tc.method == "HEAD" && w.Body.Len() != 0 {
-			t.Fatal("HEAD body")
+	}
+	for _, path := range []string{"/missing", "/assets/", "/assets/../codex.go", "/web/vendor/gridstack/"} {
+		w := httptest.NewRecorder()
+		newHandler(c).ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		if w.Code != 404 {
+			t.Fatal("unexpected asset access", path, w.Code)
 		}
 	}
 }
