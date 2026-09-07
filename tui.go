@@ -24,6 +24,7 @@ type tuiModel struct {
 	width, focus         int
 	selected             []string
 	picker               bool
+	ready                bool
 }
 
 func runTUI(ctx context.Context) error {
@@ -33,7 +34,8 @@ func runTUI(ctx context.Context) error {
 	}
 	c := newCollector()
 	go c.run(ctx, interval)
-	_, err = tea.NewProgram(tuiModel{collector: c, selected: loadTUILayout()}, tea.WithContext(ctx), tea.WithAltScreen()).Run()
+	m := tuiModel{collector: c, selected: loadTUILayout()}
+	_, err = tea.NewProgram(m, tea.WithContext(ctx), tea.WithAltScreen()).Run()
 	return err
 }
 func (m tuiModel) Init() tea.Cmd { return tuiTick() }
@@ -86,7 +88,21 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 	case tuiTickMsg:
-		m.available = buildDashboard(m.collector.snapshot())
+		snapshot := m.collector.snapshot()
+		if !snapshotReady(snapshot) {
+			return m, tuiTick()
+		}
+		m.available = buildDashboard(snapshot)
+		if !hasLimitBuckets(snapshot) {
+			filtered := m.available.Widgets[:0]
+			for _, w := range m.available.Widgets {
+				if !strings.HasPrefix(w.ID, "codex/bucket/") {
+					filtered = append(filtered, w)
+				}
+			}
+			m.available.Widgets = filtered
+		}
+		m.ready = true
 		if m.selected == nil {
 			for _, w := range m.available.Widgets {
 				if w.Default {
@@ -99,6 +115,19 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tuiTick()
 	}
 	return m, nil
+}
+
+func hasLimitBuckets(s snapshot) bool {
+	return len(object(s.Limits.Data["rateLimitsByLimitId"])) > 0 || len(object(s.Limits.Data["rateLimits"])) > 0
+}
+
+func snapshotReady(s snapshot) bool {
+	for _, r := range []result{s.Account, s.Limits, s.Usage, s.OpenRouterKey, s.OpenRouterCredits} {
+		if !r.Updated.IsZero() || r.Error != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *tuiModel) navigate(dx, dy int) {
@@ -293,6 +322,14 @@ func (m tuiModel) View() string {
 	b.WriteString("  ")
 	b.WriteString(tuiDim.Render(controls + " • " + time.Now().Format("15:04:05 UTC")))
 	b.WriteString("\n\n")
+	if !m.ready {
+		b.WriteString(tuiDim.Render("Loading provider metrics…"))
+		return b.String()
+	}
+	if len(m.dashboard.Widgets) == 0 {
+		b.WriteString(tuiDim.Render("No widgets selected. Press a to add one."))
+		return b.String()
+	}
 	for _, group := range keys {
 		b.WriteString(tuiGroup.Render(group))
 		b.WriteByte('\n')
