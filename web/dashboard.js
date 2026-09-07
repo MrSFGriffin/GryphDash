@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const STORAGE_KEY = 'gryphdash.layout.v1';
+  const NAMED_LAYOUTS_KEY = 'gryphdash.layouts.v1';
   const $ = id => document.getElementById(id);
   const catalog = new Map();
   const picker = $('widget-picker');
@@ -10,6 +11,7 @@
   let restoring = false;
   let grid;
   let pickerGroup = 'All';
+  let activeLayoutName = 'Unsaved layout';
 
   function element(tag, className, text) {
     const el = document.createElement(tag);
@@ -17,36 +19,41 @@
     if (text !== undefined) el.textContent = text;
     return el;
   }
-  function readLayout() {
+  function validateItems(items) {
+    if (!Array.isArray(items) || items.length > 500) throw new Error('Invalid layout');
+    const ids = new Set();
+    return items.map(item => {
+      if (!item || typeof item.id !== 'string' || !/^(codex|openrouter)\//.test(item.id) || item.id.length > 1000 || ids.has(item.id)) throw new Error('Invalid widget');
+      ids.add(item.id); const clean = {id: item.id};
+      for (const [key, min, max] of [['x', 0, 11], ['y', 0, 10000], ['w', 1, 12], ['h', 2, 30]]) { if (!Number.isInteger(item[key]) || item[key] < min || item[key] > max) throw new Error('Invalid position'); clean[key] = item[key]; }
+      if (clean.x + clean.w > 12) throw new Error('Invalid width'); return clean;
+    });
+  }
+  function readLayoutStore() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw === null) return null;
-      const saved = JSON.parse(raw);
-      if (saved.version !== 1 || !Array.isArray(saved.items) || saved.items.length > 500) throw new Error('Invalid layout');
-      const ids = new Set();
-      return saved.items.map(item => {
-        if (!item || typeof item.id !== 'string' || !/^(codex|openrouter)\//.test(item.id) || item.id.length > 1000 || ids.has(item.id)) throw new Error('Invalid widget');
-        ids.add(item.id);
-        const clean = {id: item.id};
-        for (const [key, min, max] of [['x', 0, 11], ['y', 0, 10000], ['w', 1, 12], ['h', 2, 30]]) {
-          if (!Number.isInteger(item[key]) || item[key] < min || item[key] > max) throw new Error('Invalid position');
-          clean[key] = item[key];
-        }
-        if (clean.x + clean.w > 12) throw new Error('Invalid width');
-        return clean;
-      });
+      const raw = localStorage.getItem(NAMED_LAYOUTS_KEY);
+      const legacy = localStorage.getItem(STORAGE_KEY);
+      if (raw !== null) { const saved = JSON.parse(raw); if (saved.version !== 1 || !Array.isArray(saved.saved)) throw new Error('Invalid layouts'); return {version: 1, active: typeof saved.active === 'string' ? saved.active : '', current: legacy === null ? null : validateItems(JSON.parse(legacy).items), saved: saved.saved.map(item => ({name: String(item.name).slice(0, 100), items: validateItems(item.items)})).filter(item => item.name)}; }
+      return legacy === null ? {version: 1, active: '', current: null, saved: []} : {version: 1, active: '', current: validateItems(JSON.parse(legacy).items), saved: []};
     } catch (error) {
       $('layout-status').textContent = 'Saved layout unavailable; using defaults.';
-      return null;
+      return {version: 1, active: '', current: null, saved: []};
     }
   }
-  const savedLayout = readLayout();
+  const layoutStore = readLayoutStore();
+  const savedLayout = layoutStore.current;
+  if (typeof layoutStore.active === 'string' && layoutStore.active) activeLayoutName = layoutStore.active;
+  else if (savedLayout === null) activeLayoutName = 'Default';
+  else { const match = layoutStore.saved.find(item => layoutSignature(item.items) === layoutSignature(savedLayout)); if (match) activeLayoutName = match.name; }
+  function layoutSignature(items) { return JSON.stringify(items.map(({id, x, y, w, h}) => ({id, x, y, w, h})).sort((a, b) => a.id.localeCompare(b.id))); }
+  function writeLayoutStore() { localStorage.setItem(STORAGE_KEY, JSON.stringify({version: 1, items: layoutStore.current || []})); localStorage.setItem(NAMED_LAYOUTS_KEY, JSON.stringify({version: 1, active: activeLayoutName, saved: layoutStore.saved})); }
+  function renderLayoutOptions() { const select = $('layout-select'); select.replaceChildren(element('option', '', 'Default')); for (const item of layoutStore.saved) select.append(element('option', '', item.name)); if (![...select.options].some(option => option.value === activeLayoutName)) select.append(element('option', '', activeLayoutName)); select.disabled = !ready; select.value = activeLayoutName; }
   function saveLayout() {
     if (!ready || restoring) return;
     try {
       // Ask for the desktop layout even when the grid is currently one column.
       const items = grid.save(false, false, undefined, 12).map(({id, x, y, w, h}) => ({id, x: x ?? 0, y: y ?? 0, w: w ?? 4, h: h ?? 4}));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({version: 1, items}));
+      layoutStore.current = items; writeLayoutStore();
       $('layout-status').textContent = 'Layout saved in this browser';
     } catch (error) {
       $('layout-status').textContent = 'Browser storage unavailable; layout changes last for this visit.';
@@ -174,7 +181,6 @@
     $('edit-layout').textContent = on ? 'Done editing' : 'Edit dashboard';
     $('edit-layout').setAttribute('aria-pressed', String(on));
     $('edit-help').hidden = !on;
-    $('restore-defaults').hidden = !on;
     document.querySelectorAll('.widget-heading').forEach(el => { el.tabIndex = on ? 0 : -1; });
   }
   function renderPicker() {
@@ -222,7 +228,8 @@
   picker.addEventListener('click', event => { if (event.target === picker) picker.close(); });
   $('widget-search').addEventListener('input', renderPicker);
   $('edit-layout').addEventListener('click', () => setEditing(!editing));
-  $('restore-defaults').addEventListener('click', () => { loadDefaults(); saveLayout(); emptyState(); updateCountdowns(); });
+  $('save-layout').addEventListener('click', () => { const name = prompt('Name this layout:'); if (!name?.trim()) return; const items = grid.save(false, false, undefined, 12).map(({id, x, y, w, h}) => ({id, x: x ?? 0, y: y ?? 0, w: w ?? 4, h: h ?? 4})); const entry = {name: name.trim().slice(0, 100), items}; layoutStore.saved = layoutStore.saved.filter(item => item.name !== entry.name); layoutStore.saved.push(entry); try { activeLayoutName = entry.name; writeLayoutStore(); renderLayoutOptions(); $('layout-status').textContent = `Saved layout: ${entry.name}`; } catch (error) { $('layout-status').textContent = 'Browser storage unavailable; layout was not saved.'; } });
+  $('layout-select').addEventListener('change', event => { const name = event.target.value; const entry = name === 'Default' ? null : layoutStore.saved.find(item => item.name === name); if (name !== 'Default' && !entry) return; restoring = true; grid.removeAll(); grid.batchUpdate(); if (entry) { for (const item of entry.items) addWidget(item.id, item); } else loadDefaults(); grid.batchUpdate(false); restoring = false; activeLayoutName = name; saveLayout(); emptyState(); updateCountdowns(); renderLayoutOptions(); });
   function updateCountdowns() {
     document.querySelectorAll('[data-resets-at]').forEach(el => {
       const seconds = Math.max(0, Math.ceil(Number(el.dataset.resetsAt) - Date.now() / 1000));
@@ -250,7 +257,7 @@
         // Establish the 12-column layout before adapting to mobile, so reloads
         // on a phone retain the exact desktop coordinates in GridStack's cache.
         responsiveColumns();
-        $('add-widgets').disabled = false; $('edit-layout').disabled = false;
+        $('add-widgets').disabled = false; $('edit-layout').disabled = false; $('save-layout').disabled = false; renderLayoutOptions();
         // Save the initial selection too, but preserve recovery messages on bad storage.
         if (savedLayout === null && $('layout-status').textContent === 'Layout saved in this browser') saveLayout();
       }

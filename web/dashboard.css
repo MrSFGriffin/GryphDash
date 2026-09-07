@@ -62,4 +62,6 @@ input { width: 100%; background: #10151e; border: 1px solid #445166; border-radi
 .picker-tab:hover { color: #eafff6; background: #203c35; }
 .picker-row { border-bottom: 1px solid #303b4b; padding: 12px 0; }
 .picker-row p { margin: 0; overflow-wrap: anywhere; } .picker-row button { flex-shrink: 0; }
+#layout-select { background: #182235; border: 1px solid #40506a; border-radius: 7px; color: #dce7f5; padding: 9px 10px; }
+.layout-label { color: #a7b3c6; font-size: .8rem; margin-left: 4px; }
 @media (max-width: 700px) { main { padding: 26px 12px; } .page-header { padding: 0 8px; } .toolbar { gap: 8px; } button { font-size: .85rem; } h1 { font-size: 2.1rem; } .value { font-size: 2rem; } }

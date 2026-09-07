@@ -44,9 +44,9 @@ default mode when no command is supplied.
   removal with the × button. Removed widgets remain available in the picker.
 - For keyboard editing, Tab to a widget heading and use arrow keys to move it;
   Shift + arrow keys changes its size. **Done editing** locks the arrangement.
-- **Restore defaults**, available while editing, restores the initial selection.
+- **Default**, available from the layout selector, restores the initial selection.
 - Layout and widget selection save automatically in this browser's `localStorage`
-  under `gryphdash.layout.v1`, including OpenRouter widgets. They survive page reloads and server restarts, and
+  under `gryphdash.layout.v1` and named layouts under `gryphdash.layouts.v1`, including OpenRouter widgets. The current layout saves automatically; **Create named layout** creates or updates a named snapshot that can be loaded from the dashboard controls. They survive page reloads and server restarts, and
   an intentionally empty dashboard stays empty. Storage contains only widget IDs
   and positions/sizes. It does not store metrics or credentials.
 
