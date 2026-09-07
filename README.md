@@ -1,8 +1,4 @@
-# GryphDash
-
-![GryphDash gryphon logo](logo.svg)
-
-See [LOGO.md](LOGO.md) for the logo's provenance, license, and preparation process.
+<h1><img src="logo.svg" alt="GryphDash logo" width="32" height="32"> GryphDash</h1>
 
 A customizable widget dashboard for metrics from multiple providers. The Go server
 uses only the standard library and embeds all HTML, CSS, and JavaScript, including
@@ -242,3 +238,5 @@ The host needs Chromium's system libraries. On Ubuntu 26.04, Playwright 1.58.2
 needs `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64` during browser installation
 and test execution to use its fallback build. Tests use port 18091 by default
 (override with `GRYPHDASH_TEST_PORT`). Screenshots are written under `/tmp`.
+
+See [LOGO.md](LOGO.md) for the logo's provenance, license, and preparation process.
