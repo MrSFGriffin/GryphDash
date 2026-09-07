@@ -2,12 +2,12 @@
 
 ## Git workflow authorization
 
-For this repository, the user authorizes Codex to create commits and push requested
-work to the configured `origin` remote by default. Do not ask for separate
-confirmation before each commit or push. Use a clear, relevant commit message,
-push the current branch, and report the resulting commit. Ask only if the user
-requests a different remote/branch or if the operation would be destructive,
-such as rewriting published history.
+Only create commits or push changes when the user explicitly asks for that action.
+Once the user has given that instruction, proceed without an additional
+interactive confirmation. Use a clear, relevant commit message, push the current
+branch, and report the resulting commit. Ask only if the user requests a
+different remote/branch or if the operation would be destructive, such as
+rewriting published history.
 
 ## Required validation
 
