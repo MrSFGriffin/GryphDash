@@ -32,8 +32,9 @@ To use the terminal dashboard instead, run `go run . tui` (or `./bin/gryphdash t
 after building). It uses the same provider collectors and widget catalog, refreshes
 on the configured interval, and runs in a full-screen Bubble Tea interface styled
 with Lip Gloss. Press `a` to open the widget picker, use arrows to focus, use
-Shift+left/right to reorder widgets, `d` to remove the focused widget, `r` to restore defaults, or `q`, `Esc`,
-or Ctrl+C to quit. The selection and order are saved in
+Shift+left/right to reorder widgets, `d` to remove the focused widget, `r` to restore defaults,
+`n` to name the current layout, and `m` to manage saved layouts. Press `q`, `Esc`,
+or Ctrl+C to quit. The selection, order, and named layouts are saved in
 `~/.config/gryphdash/layout.json` (or the platform equivalent). `web` is the
 default mode when no command is supplied.
 
@@ -235,5 +236,3 @@ The host needs Chromium's system libraries. On Ubuntu 26.04, Playwright 1.58.2
 needs `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64` during browser installation
 and test execution to use its fallback build. Tests use port 18091 by default
 (override with `GRYPHDASH_TEST_PORT`). Screenshots are written under `/tmp`.
-
-See [PLAN.md](PLAN.md) for the remaining work.

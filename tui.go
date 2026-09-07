@@ -16,6 +16,12 @@ import (
 
 type tuiTickMsg struct{}
 type tuiLayout struct {
+	Widgets []string         `json:"widgets,omitempty"`
+	Active  string           `json:"active,omitempty"`
+	Saved   []tuiNamedLayout `json:"saved,omitempty"`
+}
+type tuiNamedLayout struct {
+	Name    string   `json:"name"`
 	Widgets []string `json:"widgets"`
 }
 type tuiModel struct {
@@ -25,6 +31,11 @@ type tuiModel struct {
 	selected             []string
 	picker               bool
 	ready                bool
+	layouts              []tuiNamedLayout
+	activeLayout         string
+	nameInput            string
+	nameMode, loadMode   bool
+	loadFocus            int
 }
 
 func runTUI(ctx context.Context) error {
@@ -34,7 +45,8 @@ func runTUI(ctx context.Context) error {
 	}
 	c := newCollector()
 	go c.run(ctx, interval)
-	m := tuiModel{collector: c, selected: loadTUILayout()}
+	selected, layouts, active := loadTUILayout()
+	m := tuiModel{collector: c, selected: selected, layouts: layouts, activeLayout: active}
 	_, err = tea.NewProgram(m, tea.WithContext(ctx), tea.WithAltScreen()).Run()
 	return err
 }
@@ -43,6 +55,12 @@ func tuiTick() tea.Cmd           { return tea.Tick(time.Second, func(time.Time) 
 func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if m.nameMode {
+			return m.updateName(msg)
+		}
+		if m.loadMode {
+			return m.updateLoad(msg)
+		}
 		if m.picker {
 			switch msg.String() {
 			case "esc", "a", "q":
@@ -84,6 +102,20 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.navigate(0, 1)
 		case "r":
 			m.defaults()
+		case "n":
+			m.nameMode = true
+			m.nameInput = ""
+		case "m":
+			if len(m.layouts) > 0 || m.ready {
+				m.loadMode = true
+				m.loadFocus = 0
+				for i, layout := range m.layouts {
+					if layout.Name == m.activeLayout {
+						m.loadFocus = i + 1
+						break
+					}
+				}
+			}
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -109,12 +141,90 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selected = append(m.selected, w.ID)
 				}
 			}
+			m.activeLayout = "Default"
 			m.save()
 		}
 		m.dashboard = m.apply(m.available)
 		return m, tuiTick()
 	}
 	return m, nil
+}
+
+func (m tuiModel) updateName(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.nameMode = false
+	case "enter":
+		if strings.TrimSpace(m.nameInput) != "" {
+			m.saveNamed(strings.TrimSpace(m.nameInput))
+			m.nameMode = false
+		}
+	case "backspace":
+		if len(m.nameInput) > 0 {
+			m.nameInput = m.nameInput[:len(m.nameInput)-1]
+		}
+	default:
+		if len(msg.String()) == 1 {
+			m.nameInput += msg.String()
+		}
+	}
+	return m, nil
+}
+func (m tuiModel) updateLoad(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc", "m", "q":
+		m.loadMode = false
+	case "up", "k":
+		if m.loadFocus > 0 {
+			m.loadFocus--
+		}
+	case "down", "j":
+		if m.loadFocus < len(m.layouts) {
+			m.loadFocus++
+		}
+	case "enter":
+		if m.loadFocus == 0 {
+			m.defaults()
+			m.activeLayout = "Default"
+			m.save()
+			m.loadMode = false
+		} else if m.loadFocus <= len(m.layouts) {
+			layout := m.layouts[m.loadFocus-1]
+			m.selected = append([]string(nil), layout.Widgets...)
+			m.activeLayout = layout.Name
+			m.save()
+			m.dashboard = m.apply(m.available)
+			m.loadMode = false
+		}
+	case "d", "delete", "x":
+		if m.loadFocus > 0 && m.loadFocus <= len(m.layouts) {
+			deleted := m.layouts[m.loadFocus-1].Name
+			m.layouts = append(m.layouts[:m.loadFocus-1], m.layouts[m.loadFocus:]...)
+			if m.activeLayout == deleted {
+				m.defaults()
+				m.activeLayout = "Default"
+			}
+			m.save()
+			if m.loadFocus > len(m.layouts) {
+				m.loadFocus = len(m.layouts)
+			}
+		}
+	}
+	return m, nil
+}
+func (m *tuiModel) saveNamed(name string) {
+	entry := tuiNamedLayout{Name: name, Widgets: append([]string(nil), m.selected...)}
+	for i := range m.layouts {
+		if m.layouts[i].Name == name {
+			m.layouts[i] = entry
+			m.activeLayout = name
+			m.save()
+			return
+		}
+	}
+	m.layouts = append(m.layouts, entry)
+	m.activeLayout = name
+	m.save()
 }
 
 func hasLimitBuckets(s snapshot) bool {
@@ -270,17 +380,20 @@ func tuiLayoutPath() string {
 	}
 	return filepath.Join(dir, "gryphdash", "layout.json")
 }
-func loadTUILayout() []string {
+func loadTUILayout() ([]string, []tuiNamedLayout, string) {
 	p := tuiLayoutPath()
 	data, err := os.ReadFile(p)
 	if err != nil {
-		return nil
+		return nil, nil, ""
 	}
 	var l tuiLayout
 	if json.Unmarshal(data, &l) != nil {
-		return nil
+		return nil, nil, ""
 	}
-	return l.Widgets
+	if l.Widgets != nil {
+		return l.Widgets, l.Saved, l.Active
+	}
+	return nil, l.Saved, l.Active
 }
 func (m tuiModel) save() {
 	p := tuiLayoutPath()
@@ -288,7 +401,7 @@ func (m tuiModel) save() {
 		return
 	}
 	_ = os.MkdirAll(filepath.Dir(p), 0700)
-	data, _ := json.MarshalIndent(tuiLayout{m.selected}, "", "  ")
+	data, _ := json.MarshalIndent(tuiLayout{Widgets: m.selected, Active: m.activeLayout, Saved: m.layouts}, "", "  ")
 	_ = os.WriteFile(p, data, 0600)
 }
 
@@ -301,6 +414,24 @@ var (
 )
 
 func (m tuiModel) View() string {
+	if m.nameMode {
+		return tuiTitle.Render("Name layout") + "\n\n" + m.nameInput + "_\n\n" + tuiDim.Render("Enter save • Esc cancel")
+	}
+	if m.loadMode {
+		var b strings.Builder
+		b.WriteString(tuiTitle.Render("Manage layouts"))
+		b.WriteString("\n\n")
+		for i, layout := range append([]tuiNamedLayout{{Name: "Default"}}, m.layouts...) {
+			marker := "  "
+			if i == m.loadFocus {
+				marker = "> "
+			}
+			fmt.Fprintf(&b, "%s%s\n", marker, layout.Name)
+		}
+		b.WriteString("\n")
+		b.WriteString(tuiDim.Render("↑/↓ choose • Enter open • d delete • Esc cancel"))
+		return b.String()
+	}
 	if m.picker {
 		return m.pickerView()
 	}
@@ -313,14 +444,18 @@ func (m tuiModel) View() string {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	controls := "a add • d delete • arrows move/focus • r defaults • q quit"
+	controls := "a add • d delete • arrows move/focus • n name • m manage layouts • q quit"
 	if m.picker {
 		controls = "Add widget: ↑/↓ choose • Enter toggle • Esc close"
 	}
 	var b strings.Builder
 	b.WriteString(tuiTitle.Render("GryphDash"))
 	b.WriteString("  ")
-	b.WriteString(tuiDim.Render(controls + " • " + time.Now().Format("15:04:05 UTC")))
+	name := m.activeLayout
+	if name == "" {
+		name = "Unsaved layout"
+	}
+	b.WriteString(tuiDim.Render(name + " • " + controls + " • " + time.Now().Format("15:04:05 UTC")))
 	b.WriteString("\n\n")
 	if !m.ready {
 		b.WriteString(tuiDim.Render("Loading provider metrics…"))
