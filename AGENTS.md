@@ -1,5 +1,14 @@
 # Contribution guidance
 
+## Git workflow authorization
+
+For this repository, the user authorizes Codex to create commits and push requested
+work to the configured `origin` remote by default. Do not ask for separate
+confirmation before each commit or push. Use a clear, relevant commit message,
+push the current branch, and report the resulting commit. Ask only if the user
+requests a different remote/branch or if the operation would be destructive,
+such as rewriting published history.
+
 ## Required validation
 
 For code or API changes, run the repository checks that apply to the change:
