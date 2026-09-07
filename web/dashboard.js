@@ -24,7 +24,7 @@
       if (saved.version !== 1 || !Array.isArray(saved.items) || saved.items.length > 500) throw new Error('Invalid layout');
       const ids = new Set();
       return saved.items.map(item => {
-        if (!item || typeof item.id !== 'string' || !item.id.startsWith('codex/') || item.id.length > 1000 || ids.has(item.id)) throw new Error('Invalid widget');
+        if (!item || typeof item.id !== 'string' || !/^(codex|openrouter)\//.test(item.id) || item.id.length > 1000 || ids.has(item.id)) throw new Error('Invalid widget');
         ids.add(item.id);
         const clean = {id: item.id};
         for (const [key, min, max] of [['x', 0, 11], ['y', 0, 10000], ['w', 1, 12], ['h', 2, 30]]) {
@@ -54,7 +54,8 @@
   function activeIDs() { return new Set(grid.getGridItems().map(el => el.gridstackNode.id)); }
   function emptyState() { $('empty-state').hidden = !ready || grid.getGridItems().length !== 0; }
   function missingWidget(id) {
-    return {id, title: 'Metric unavailable', group: 'Codex', kind: 'metric', value: 'Unavailable', note: 'This saved metric is not in the latest response. It will return here when available.', status: 'Waiting for metric', width: 4, height: 4};
+    const group = id.startsWith('openrouter/') ? 'OpenRouter' : 'Codex';
+    return {id, title: 'Metric unavailable', group, kind: 'metric', value: 'Unavailable', note: 'This saved metric is not in the latest response. It will return here when available.', status: 'Waiting for metric', width: 4, height: 4};
   }
   function renderBody(container, w) {
     const body = container.querySelector('.widget-body');

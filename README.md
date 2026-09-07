@@ -37,7 +37,7 @@ reads metrics, and stops it. No model tasks are started or earned resets redeeme
   Shift + arrow keys changes its size. **Done editing** locks the arrangement.
 - **Restore defaults**, available while editing, restores the initial selection.
 - Layout and widget selection save automatically in this browser's `localStorage`
-  under `gryphdash.layout.v1`. They survive page reloads and server restarts, and
+  under `gryphdash.layout.v1`, including OpenRouter widgets. They survive page reloads and server restarts, and
   an intentionally empty dashboard stays empty. Storage contains only widget IDs
   and positions/sizes. It does not store metrics or credentials.
 
