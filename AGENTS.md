@@ -11,6 +11,9 @@ rewriting published history.
 
 ## Required validation
 
+The user has authorized the agent to run these validation commands whenever needed
+for repository work; do not ask for separate permission before running them.
+
 For code or API changes, run the repository checks that apply to the change:
 
 ```sh

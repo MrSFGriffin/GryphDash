@@ -9,13 +9,13 @@ OpenRouter widgets use the optional `OPENROUTER_API_KEY` when it is configured.
 
 ## Run
 
-Install Go 1.22 or later and the Codex CLI. Authenticate with your ChatGPT account
+Install Go 1.24 or later and the Codex CLI. Authenticate with your ChatGPT account
 as the OS user who will run the dashboard:
 
 ```sh
 codex login
 codex login status
-go run .
+go run . web
 ```
 
 An existing ChatGPT login can be reused. No API key or token environment variable
@@ -27,6 +27,15 @@ widget values refresh in place every 15 seconds from the server cache. Provider
 reads run about once per minute by default. Only one polling cycle runs at a time, with a
 45-second timeout. Each cycle starts a local `codex app-server` over stdin/stdout,
 reads metrics, and stops it. No model tasks are started or earned resets redeemed.
+
+To use the terminal dashboard instead, run `go run . tui` (or `./bin/gryphdash tui`
+after building). It uses the same provider collectors and widget catalog, refreshes
+on the configured interval, and runs in a full-screen Bubble Tea interface styled
+with Lip Gloss. Press `a` to open the widget picker, use arrows to focus and move
+widgets, `d` to remove the focused widget, `r` to restore defaults, or `q`, `Esc`,
+or Ctrl+C to quit. The selection and order are saved in
+`~/.config/gryphdash/layout.json` (or the platform equivalent). `web` is the
+default mode when no command is supplied.
 
 ## Customize your dashboard
 
@@ -132,6 +141,7 @@ go test ./...
 go vet ./...
 go build -o bin/gryphdash .
 ./bin/gryphdash
+./bin/gryphdash tui
 ```
 
 With a C compiler installed, also run `CGO_ENABLED=1 go test -race ./...`.

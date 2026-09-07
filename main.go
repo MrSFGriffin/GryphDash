@@ -6,6 +6,7 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -59,37 +60,70 @@ func newHandler(c *collector) http.Handler {
 }
 
 func main() {
+	mode := "web"
+	if len(os.Args) > 1 {
+		mode = os.Args[1]
+	}
+	if mode == "help" || mode == "-h" || mode == "--help" {
+		printUsage()
+		return
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	var err error
+	switch mode {
+	case "web":
+		err = runWeb(ctx)
+	case "tui":
+		err = runTUI(ctx)
+	default:
+		printUsage()
+		os.Exit(2)
+	}
+	if err != nil {
+		log.Print(err)
+	}
+}
+
+func printUsage() {
+	fmt.Println("Usage: gryphdash [web|tui]")
+	fmt.Println("  web  serve the browser dashboard (default)")
+	fmt.Println("  tui  display the dashboard in the terminal")
+}
+
+func newCollector() *collector {
+	executable := os.Getenv("GRYPHDASH_CODEX_BIN")
+	if executable == "" {
+		executable = "codex"
+	}
+	return &collector{executable: executable, openRouterKey: os.Getenv("OPENROUTER_API_KEY"), httpClient: &http.Client{Timeout: 15 * time.Second}}
+}
+
+func refreshInterval() (time.Duration, error) {
 	interval := time.Minute
 	if raw := os.Getenv("GRYPHDASH_REFRESH_INTERVAL"); raw != "" {
 		var err error
 		interval, err = time.ParseDuration(raw)
 		if err != nil || interval < 30*time.Second {
-			log.Fatal("GRYPHDASH_REFRESH_INTERVAL must be a duration of at least 30s")
+			return 0, errors.New("GRYPHDASH_REFRESH_INTERVAL must be a duration of at least 30s")
 		}
 	}
-	executable := os.Getenv("GRYPHDASH_CODEX_BIN")
-	if executable == "" {
-		executable = "codex"
+	return interval, nil
+}
+
+func runWeb(ctx context.Context) error {
+	interval, err := refreshInterval()
+	if err != nil {
+		return err
 	}
-	c := &collector{executable: executable}
-	c.openRouterKey = os.Getenv("OPENROUTER_API_KEY")
-	c.httpClient = &http.Client{Timeout: 15 * time.Second}
+	c := newCollector()
 	done := make(chan struct{})
 	go func() { defer close(done); c.run(ctx, interval) }()
-
 	addr := os.Getenv("GRYPHDASH_ADDR")
 	if addr == "" {
 		addr = "127.0.0.1:8080"
 	}
-	server := &http.Server{
-		Addr:              addr,
-		Handler:           newHandler(c),
-		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
+	server := &http.Server{Addr: addr, Handler: newHandler(c), ReadHeaderTimeout: 5 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -98,8 +132,8 @@ func main() {
 	}()
 	log.Printf("GryphDash listening on http://%s", addr)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Printf("server: %v", err)
+		return err
 	}
-	stop()
 	<-done
+	return nil
 }
