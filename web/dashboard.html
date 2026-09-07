@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="60">
   <title>GryphDash · Personal dashboard</title>
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #10151e; color: #edf2fa; }
@@ -23,8 +24,9 @@
     .metric:last-child { padding-bottom: 0; }
     dt { color: #b7c3d5; font-size: .9rem; }
     dd { margin: 8px 0 0; }
-    .value { font-size: 2rem; font-weight: 650; letter-spacing: -.04em; }
+    .value { overflow-wrap: anywhere; font-size: 1.5rem; font-weight: 650; letter-spacing: -.04em; }
     .note { color: #a7b3c6; font-size: .85rem; line-height: 1.5; }
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; } th, td { text-align: left; padding: 10px 4px; border-bottom: 1px solid #303b4b; } meter { width: 100%; }
     footer { margin-top: 28px; font-size: .85rem; }
     @media (max-width: 700px) { main { padding: 32px 18px; } .providers { grid-template-columns: 1fr; } }
   </style>
@@ -33,14 +35,14 @@
   <main>
     <header>
       <div><h1>GryphDash</h1><p>Your AI usage, at a glance.</p></div>
-      <span class="badge">Demo mode</span>
+      <span class="badge">Codex live · OpenRouter demo</span>
     </header>
-    <p class="notice">All values are fictional examples. No accounts are connected and no third-party requests are made. Metric availability will depend on the supported provider APIs.</p>
+    <p class="notice">Codex metrics use your local login and refresh in the background. Missing metrics are marked unavailable; failed updates retain visibly stale data. OpenRouter values are fictional examples.</p>
     <div class="providers">
-      {{range .}}
+      {{range .Providers}}
       <section aria-label="{{.Name}} metrics">
         <h2>{{.Name}}</h2>
-        <p class="detail">{{.Detail}}</p>
+        <p class="detail">{{.Detail}}</p><p class="note">{{.Status}}</p>
         <dl>
           {{range .Metrics}}
           <div class="metric">
@@ -50,10 +52,14 @@
           </div>
           {{end}}
         </dl>
+        {{if .Days}}<h3>Daily tokens</h3><p class="note">Dates and totals as returned by Codex; missing dates are not filled with zero.</p>
+        <table><thead><tr><th scope="col">Date</th><th scope="col">Tokens</th><th scope="col">Relative activity</th></tr></thead><tbody>
+        {{range .Days}}<tr><td>{{.Date}}</td><td>{{.Tokens}}</td><td><meter min="0" max="100" value="{{.Percent}}" aria-label="Relative activity on {{.Date}}">{{.Percent}}%</meter></td></tr>{{end}}
+        </tbody></table>{{end}}
       </section>
       {{end}}
     </div>
-    <footer>Local dashboard · Static sample data · Refreshing does not fetch live usage</footer>
+    <footer>Page refreshes every minute · Provider updates are cached · Times shown in UTC</footer>
   </main>
 </body>
 </html>

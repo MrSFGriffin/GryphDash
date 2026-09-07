@@ -1,31 +1,33 @@
 # Next steps
 
-1. **Confirm data sources and metric definitions.** Check current official Codex
-   and OpenRouter documentation and the intended account types. Verify supported
-   authentication, endpoints, permissions, and response fields before promising
-   live metrics. Distinguish Codex subscription usage from OpenAI API billing;
-   do not assume an OpenAI API key exposes Codex subscription limits. If a desired
-   metric has no supported interface, show it as unavailable and document that
-   limitation. Define reporting windows, reset times, currencies, and whether
-   budgets apply to an account, a key, or a locally configured allowance.
-2. **Add server-side configuration.** Introduce documented environment variables
-   for supported credentials, refresh intervals, and an optional monthly budget.
-   Add a placeholder-only `.env.example` once credential requirements are known.
-   Validate settings at startup; keep secrets out of HTML, logs, and source control.
-3. **Implement provider adapters.** Keep fetching separate from rendering behind
-   a small common snapshot model. Start with OpenRouter spend and credits, then
-   supported Codex metrics. Use explicit HTTP timeouts, handle authentication and
-   rate-limit errors, and test adapters against local HTTP fixtures. Make demo
-   mode explicit; never substitute dummy values for a failed live request.
-4. **Cache and refresh snapshots.** Fetch on a configurable schedule rather than
-   every page view. Respect provider rate limits and retry guidance. Track last
-   successful updates and retain stale data with a visible status when a provider
-   fails. Let one provider remain usable if the other is unavailable.
-5. **Refine the dashboard.** Show connection state, update timestamps, reporting
-   windows, and reset times. Distinguish prepaid credit balance from budget
-   remaining. Add accessible usage indicators and optional lightweight refresh
-   without introducing a frontend build requirement.
-6. **Prepare for regular use.** Add handler and configuration tests, CI for Go
-   formatting/tests/vet/build, graceful shutdown, and service installation notes.
-   Keep the default local listener; document authentication and HTTPS requirements
-   before supporting remote access to real account metrics.
+## Implemented
+
+- Embedded Go dashboard with a local-only default listener.
+- Live Codex account, rate-limit, credit, earned-reset, and token-activity reads
+  through the local app-server protocol and existing ChatGPT login.
+- All returned limit buckets and daily activity rows, missing-value handling,
+  per-section stale status, bounded polling, and shutdown cancellation.
+- Protocol, partial-failure, cancellation, and rendering tests, plus standalone build instructions.
+
+## Remaining
+
+1. **Connect OpenRouter.** Confirm current official endpoints, authentication,
+   scopes, and account-versus-key spend definitions. Add documented server-side
+   credentials and a placeholder-only `.env.example`. Define currency and budget
+   windows, keeping prepaid credits distinct from a configured monthly budget.
+   Replace OpenRouter demo values with an explicit connection state and live data.
+2. **Strengthen refresh behavior.** Add provider-aware retry guidance, backoff,
+   and jitter. Consider a persistent Codex app-server connection if startup cost
+   becomes significant. Preserve independent availability and never substitute
+   fictional values for failed reads.
+3. **Improve presentation.** Add browser-local timestamps and ticking countdowns;
+   consider date filters for long daily-activity histories. Verify layout and
+   accessibility in browsers and on mobile devices.
+4. **Prepare for regular use.** Add CI for formatting, race tests, vet, and builds,
+   plus service installation instructions and a documented CLI compatibility
+   policy. Keep the default local listener; add authentication and HTTPS guidance
+   before remote access is supported.
+5. **Optional history.** Decide whether to store local snapshots for trends beyond
+   the dates returned by Codex. Document retention and distinguish measured
+   history from estimates. Per-thread billing exploration is a separate feature
+   and is not needed for the account dashboard.
