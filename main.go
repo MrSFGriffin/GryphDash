@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-//go:embed web
+//go:embed web logo.svg
 var webFiles embed.FS
 
 func newHandler(c *collector) http.Handler {
@@ -25,6 +25,7 @@ func newHandler(c *collector) http.Handler {
 		"/assets/dashboard.css":     {"web/dashboard.css", "text/css; charset=utf-8"},
 		"/assets/gridstack-all.js":  {"web/vendor/gridstack/gridstack-all.js", "text/javascript; charset=utf-8"},
 		"/assets/gridstack.min.css": {"web/vendor/gridstack/gridstack.min.css", "text/css; charset=utf-8"},
+		"/assets/logo.svg":          {"logo.svg", "image/svg+xml"},
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		asset, found := assets[r.URL.Path]

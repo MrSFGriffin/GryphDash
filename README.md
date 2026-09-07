@@ -1,5 +1,9 @@
 # GryphDash
 
+![GryphDash gryphon logo](logo.svg)
+
+See [LOGO.md](LOGO.md) for the logo's provenance, license, and preparation process.
+
 A customizable widget dashboard for metrics from multiple providers. The Go server
 uses only the standard library and embeds all HTML, CSS, and JavaScript, including
 GridStack, in a single executable. Live metrics require the Codex CLI on the same
