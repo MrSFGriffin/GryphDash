@@ -116,10 +116,14 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.navigate(-1, 0)
 		case "right", "l":
 			m.navigate(1, 0)
-		case "shift+left", "shift+h":
-			m.move(-1)
-		case "shift+right", "shift+l":
-			m.move(1)
+		case "shift+left", "shift+h", "H":
+			m.reorder(-1, 0)
+		case "shift+right", "shift+l", "L":
+			m.reorder(1, 0)
+		case "shift+up", "shift+k", "K":
+			m.reorder(0, -1)
+		case "shift+down", "shift+j", "J":
+			m.reorder(0, 1)
 		case "up", "k":
 			m.navigate(0, -1)
 		case "down", "j":
@@ -421,6 +425,35 @@ func (m *tuiModel) move(delta int) {
 	}
 	m.selected[m.focus], m.selected[j] = m.selected[j], m.selected[m.focus]
 	m.focus = j
+	m.save()
+	m.dashboard = m.apply(m.available)
+}
+func (m *tuiModel) reorder(dx, dy int) {
+	if m.focus < 0 || m.focus >= len(m.dashboard.Widgets) {
+		return
+	}
+	old := m.focus
+	m.navigate(dx, dy)
+	target := m.focus
+	if target == old {
+		return
+	}
+	oldID, targetID := m.dashboard.Widgets[old].ID, m.dashboard.Widgets[target].ID
+	oldPos, targetPos := -1, -1
+	for i, id := range m.selected {
+		if id == oldID {
+			oldPos = i
+		}
+		if id == targetID {
+			targetPos = i
+		}
+	}
+	if oldPos < 0 || targetPos < 0 {
+		m.focus = old
+		return
+	}
+	m.selected[oldPos], m.selected[targetPos] = m.selected[targetPos], m.selected[oldPos]
+	m.focus = target
 	m.save()
 	m.dashboard = m.apply(m.available)
 }

@@ -34,7 +34,7 @@ on the configured interval, and runs in a full-screen Bubble Tea interface style
 with Lip Gloss. Press `a` to open the widget picker; use `/` to search with
 order-independent terms across widget names, groups, and descriptions. Use
 left/right or Tab to move between the All tab and provider-group tabs, and arrows to focus widgets. Use
-Shift+left/right to reorder widgets, `d` to remove the focused widget, `r` to restore defaults,
+Shift+arrow or Shift+`h/j/k/l` to reorder widgets, `d` to remove the focused widget, `r` to restore defaults,
 `n` to name the current layout, and `m` to manage saved layouts. Press `q`, `Esc`,
 or Ctrl+C to quit. The selection, order, and named layouts are saved in
 `~/.config/gryphdash/layout.json` (or the platform equivalent). `web` is the
