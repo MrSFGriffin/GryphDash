@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GryphDash · Personal dashboard</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #10151e; color: #edf2fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1080px; margin: auto; padding: 64px 24px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    h1 { font-size: 2.2rem; letter-spacing: -.06em; margin: 0; }
+    header p, footer { color: #a7b3c6; line-height: 1.6; }
+    .badge { color: #b7ecd9; background: #203c35; padding: 8px 14px; border-radius: 999px; font-size: .85rem; }
+    .notice { margin: 28px 0; padding: 16px 20px; border: 1px solid #4b432d; border-radius: 12px; color: #e6d4a1; background: #29261f; line-height: 1.6; }
+    .providers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+    section { border: 1px solid #303b4b; border-radius: 16px; background: #19212e; padding: 26px; }
+    h2 { margin: 0 0 6px; font-size: 1.3rem; }
+    .detail { color: #a7b3c6; margin: 0 0 24px; font-size: .9rem; }
+    dl { margin: 0; }
+    .metric { padding: 22px 0; border-top: 1px solid #303b4b; }
+    .metric:last-child { padding-bottom: 0; }
+    dt { color: #b7c3d5; font-size: .9rem; }
+    dd { margin: 8px 0 0; }
+    .value { font-size: 2rem; font-weight: 650; letter-spacing: -.04em; }
+    .note { color: #a7b3c6; font-size: .85rem; line-height: 1.5; }
+    footer { margin-top: 28px; font-size: .85rem; }
+    @media (max-width: 700px) { main { padding: 32px 18px; } .providers { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>GryphDash</h1><p>Your AI usage, at a glance.</p></div>
+      <span class="badge">Demo mode</span>
+    </header>
+    <p class="notice">All values are fictional examples. No accounts are connected and no third-party requests are made. Metric availability will depend on the supported provider APIs.</p>
+    <div class="providers">
+      {{range .}}
+      <section aria-label="{{.Name}} metrics">
+        <h2>{{.Name}}</h2>
+        <p class="detail">{{.Detail}}</p>
+        <dl>
+          {{range .Metrics}}
+          <div class="metric">
+            <dt>{{.Label}}</dt>
+            <dd class="value">{{.Value}}</dd>
+            <dd class="note">{{.Note}}</dd>
+          </div>
+          {{end}}
+        </dl>
+      </section>
+      {{end}}
+    </div>
+    <footer>Local dashboard · Static sample data · Refreshing does not fetch live usage</footer>
+  </main>
+</body>
+</html>
