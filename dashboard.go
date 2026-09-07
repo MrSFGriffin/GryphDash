@@ -261,7 +261,7 @@ func buildDashboard(s snapshot) dashboard {
 				b := object(buckets[key])
 				copy := c
 				copy.Default = c.Default && key == "codex"
-				group := c.Group + " · " + key
+				group := c.Group
 				id := bucketID(c.ID, key)
 				raw := pathValue(b, c.Logic.Path)
 				if c.Logic.Type == "limitWindow" {
