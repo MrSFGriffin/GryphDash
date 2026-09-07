@@ -5,8 +5,7 @@ uses only the standard library and embeds all HTML, CSS, and JavaScript, includi
 GridStack, in a single executable. Live metrics require the Codex CLI on the same
 machine. Widget definitions live in the embedded [`widgets.json`](widgets.json)
 catalog, so adding a metric does not require editing the dashboard renderer.
-OpenRouter definitions are included for later integration but are unavailable
-until its adapter is implemented.
+OpenRouter widgets use the optional `OPENROUTER_API_KEY` when it is configured.
 
 ## Run
 
@@ -60,7 +59,7 @@ size/visibility, and `logic`. Logic names are interpreted by the server: `scalar
 reads a dotted field from an account, limits, or usage response; `limitWindow`
 adds remaining percentage and reset handling for a limit bucket; `daily` and
 `resetDetails` render structured lists; `timestamp` formats Unix timestamps; and
-`url` records the future HTTP source without making a request yet. Definitions
+`url` metadata records the HTTP source for provider adapters. Definitions
 with `scope: "limitBuckets"` expand once for every provider-returned bucket.
 
 The server validates required catalog fields at startup and embeds the JSON in the
@@ -96,6 +95,13 @@ verified against Codex CLI 0.153.4. Field and method availability depends on CLI
 version and account. Account-wide activity is shown as reported by Codex; the
 server does not scrape conversations or request per-thread billing estimates.
 
+OpenRouter uses `GET /api/v1/key` for current API-key usage, monthly usage,
+configured limit, remaining limit, reset period, and expiration. It also attempts
+`GET /api/v1/credits` for purchased and used credits. OpenRouter may require a
+management key for the credits endpoint; a 401/403 is shown on that widget rather
+than treated as a zero balance. See the [OpenRouter current-key documentation](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-key)
+and [credits documentation](https://openrouter.ai/docs/api/api-reference/credits/get-credits).
+
 ## Configuration
 
 | Environment variable | Default | Meaning |
@@ -103,6 +109,7 @@ server does not scrape conversations or request per-thread billing estimates.
 | `GRYPHDASH_ADDR` | `127.0.0.1:8080` | HTTP listen address |
 | `GRYPHDASH_CODEX_BIN` | `codex` | CLI executable name or full path (not shell arguments) |
 | `GRYPHDASH_REFRESH_INTERVAL` | `1m` | Delay after each polling cycle; minimum `30s` |
+| `OPENROUTER_API_KEY` | unset | Bearer key for OpenRouter key usage and credits requests |
 
 ```sh
 GRYPHDASH_ADDR=127.0.0.1:9090 GRYPHDASH_REFRESH_INTERVAL=2m go run .
@@ -111,6 +118,9 @@ GRYPHDASH_ADDR=127.0.0.1:9090 GRYPHDASH_REFRESH_INTERVAL=2m go run .
 The server and its Codex child inherit the shell environment, including an
 existing `CODEX_HOME` override. `.env` is gitignored but is not automatically
 loaded. Use shell environment variables or your service manager's configuration.
+For example: `OPENROUTER_API_KEY=sk-or-v1-... go run .`. The key is kept in
+memory and is never sent to the browser or written to logs. Without the variable,
+OpenRouter widgets display an unavailable configuration status.
 
 The default listener is local only. There is no authentication: binding to
 `0.0.0.0:8080` exposes real account metrics through other network interfaces.

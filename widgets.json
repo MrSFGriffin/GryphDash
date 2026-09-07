@@ -247,31 +247,91 @@
       "id": "openrouter/spend",
       "group": "OpenRouter",
       "name": "Spend this month",
-      "description": "Requires an OpenRouter usage endpoint and credential",
+      "description": "Usage charged to the current OpenRouter API key this month · USD",
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "url", "source": "openrouter", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouterKey", "path": "usage_monthly", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
     },
     {
       "id": "openrouter/budget",
       "group": "OpenRouter",
       "name": "Budget remaining",
-      "description": "Requires an OpenRouter usage endpoint and configured budget",
+      "description": "Remaining configured limit for the current OpenRouter API key · USD",
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "url", "source": "openrouter", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouterKey", "path": "limit_remaining", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
     },
     {
       "id": "openrouter/credits",
       "group": "OpenRouter",
       "name": "Credit balance",
-      "description": "Requires an OpenRouter credits endpoint and credential",
+      "description": "Total purchased credits returned by OpenRouter · USD",
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "url", "source": "openrouter", "url": "https://openrouter.ai/api/v1/credits", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouterCredits", "path": "total_credits", "url": "https://openrouter.ai/api/v1/credits", "method": "GET" }
+    },
+    {
+      "id": "openrouter/usage/daily",
+      "group": "OpenRouter",
+      "name": "Usage today",
+      "description": "Usage charged to the current API key today · USD",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "source": "openrouterKey", "path": "usage_daily", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+    },
+    {
+      "id": "openrouter/usage/weekly",
+      "group": "OpenRouter",
+      "name": "Usage this week",
+      "description": "Usage charged to the current API key this week · USD",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "source": "openrouterKey", "path": "usage_weekly", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+    },
+    {
+      "id": "openrouter/limit",
+      "group": "OpenRouter",
+      "name": "Key spending limit",
+      "description": "Configured spending limit for the current API key · USD",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "source": "openrouterKey", "path": "limit", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+    },
+    {
+      "id": "openrouter/limit-reset",
+      "group": "OpenRouter",
+      "name": "Key limit reset",
+      "description": "Reset period for the current API key",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "source": "openrouterKey", "path": "limit_reset", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+    },
+    {
+      "id": "openrouter/expires",
+      "group": "OpenRouter",
+      "name": "Key expiration",
+      "description": "Expiration timestamp for the current API key",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "timestamp", "source": "openrouterKey", "path": "expires_at", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+    },
+    {
+      "id": "openrouter/credits/used",
+      "group": "OpenRouter",
+      "name": "Credits used",
+      "description": "Total credits used according to the management endpoint · USD",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "source": "openrouterCredits", "path": "total_usage", "url": "https://openrouter.ai/api/v1/credits", "method": "GET" }
     }
   ]
 }

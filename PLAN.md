@@ -12,17 +12,18 @@
 - In-place metric refresh and ticking reset countdowns.
 - Declarative embedded `widgets.json` catalog with groups, descriptions, stable
   IDs, and typed logic for scalar, limit-window, daily, reset-detail, timestamp,
-  and future URL-backed widgets.
+  and URL-backed widgets.
+- OpenRouter key-level usage widgets using `OPENROUTER_API_KEY`, with graceful
+  handling when the credits endpoint requires a management key.
 - Protocol, partial-failure, cancellation, widget API, and browser interaction
   tests, plus standalone build instructions.
 
 ## Remaining
 
-1. **Connect OpenRouter.** Confirm current official endpoints, authentication,
-   scopes, and account-versus-key spend definitions. Add documented server-side
-   credentials and a placeholder-only `.env.example`. Define currency and budget
-   windows, keeping prepaid credits distinct from a configured monthly budget.
-   Add OpenRouter widgets with an explicit connection state and live data.
+1. **Expand OpenRouter.** Add management-key configuration for account-wide
+   credits and activity, then add explicit budget/currency handling. Current
+   key-level usage widgets use `OPENROUTER_API_KEY`; credits remain unavailable
+   when OpenRouter requires a management key.
 2. **Strengthen refresh behavior.** Add provider-aware retry guidance, backoff,
    and jitter. Consider a persistent Codex app-server connection if startup cost
    becomes significant. Preserve independent availability and never substitute

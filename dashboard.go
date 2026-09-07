@@ -107,11 +107,16 @@ func value(v any) string {
 	return fmt.Sprint(v)
 }
 func timestamp(v any) string {
-	n, ok := v.(float64)
-	if !ok {
-		return "Unavailable"
+	switch x := v.(type) {
+	case float64:
+		return time.Unix(int64(x), 0).UTC().Format("2006-01-02 15:04 MST")
+	case string:
+		t, err := time.Parse(time.RFC3339, x)
+		if err == nil {
+			return t.UTC().Format("2006-01-02 15:04 MST")
+		}
 	}
-	return time.Unix(int64(n), 0).UTC().Format("2006-01-02 15:04 MST")
+	return "Unavailable"
 }
 func status(r result) string {
 	if r.Updated.IsZero() {
@@ -145,6 +150,10 @@ func sourceResult(logic widgetLogic, s snapshot) result {
 		return s.Limits
 	case "usage":
 		return s.Usage
+	case "openrouterKey":
+		return s.OpenRouterKey
+	case "openrouterCredits":
+		return s.OpenRouterCredits
 	}
 	return result{}
 }
@@ -186,9 +195,6 @@ func limitWidget(c widgetConfig, id, group string, raw any, r result) widget {
 }
 func staticWidget(c widgetConfig, s snapshot) widget {
 	r := sourceResult(c.Logic, s)
-	if c.Logic.Type == "url" {
-		return configWidget(c, c.ID, c.Group, nil, r)
-	}
 	raw := pathValue(r.Data, c.Logic.Path)
 	w := configWidget(c, c.ID, c.Group, raw, r)
 	switch c.Logic.Type {

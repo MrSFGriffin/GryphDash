@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os/exec"
 	"sync"
 	"time"
@@ -16,11 +17,16 @@ type result struct {
 	Updated time.Time
 	Error   string
 }
-type snapshot struct{ Account, Limits, Usage result }
+type snapshot struct {
+	Account, Limits, Usage           result
+	OpenRouterKey, OpenRouterCredits result
+}
 type collector struct {
-	mu         sync.RWMutex
-	state      snapshot
-	executable string
+	mu            sync.RWMutex
+	state         snapshot
+	executable    string
+	openRouterKey string
+	httpClient    *http.Client
 }
 
 func (c *collector) snapshot() snapshot { c.mu.RLock(); defer c.mu.RUnlock(); return c.state }
@@ -74,6 +80,12 @@ func (r *rpcClient) call(method string, params any) (map[string]any, error) {
 	return nil, fmt.Errorf("app-server stopped or request timed out")
 }
 func (c *collector) refresh(parent context.Context) {
+	openRouterDone := make(chan struct{})
+	go func() {
+		defer close(openRouterDone)
+		c.refreshOpenRouter(parent)
+	}()
+	defer func() { <-openRouterDone }()
 	ctx, cancel := context.WithTimeout(parent, 45*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, c.executable, "app-server")
@@ -128,7 +140,7 @@ func (c *collector) refresh(parent context.Context) {
 func (c *collector) fail() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	for _, r := range []*result{&c.state.Account, &c.state.Limits, &c.state.Usage} {
+	for _, r := range []*result{&c.state.Account, &c.state.Limits, &c.state.Usage, &c.state.OpenRouterKey, &c.state.OpenRouterCredits} {
 		r.Error = "Could not connect to Codex. Check that the CLI is installed and run codex login as the server user."
 	}
 }

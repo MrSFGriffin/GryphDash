@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -81,7 +82,7 @@ func TestDashboardMetrics(t *testing.T) {
 	openRouterURLs := 0
 	for _, c := range configuredWidgetCatalog.Widgets {
 		if c.Group == "OpenRouter" {
-			if c.Logic.Type != "url" || c.Logic.URL == "" || c.Logic.Method == "" {
+			if c.Logic.Source == "" || c.Logic.URL == "" || c.Logic.Method == "" {
 				t.Fatalf("OpenRouter widget is missing URL logic: %+v", c)
 			}
 			openRouterURLs++
@@ -186,8 +187,16 @@ done
 	if err := os.WriteFile(path, []byte(script), 0700); err != nil {
 		t.Fatal(err)
 	}
+	openRouter := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"usage_monthly":7}}`))
+	}))
+	defer openRouter.Close()
+	previousBase := openRouterAPIBase
+	openRouterAPIBase = openRouter.URL
+	defer func() { openRouterAPIBase = previousBase }()
 	old := time.Now().Add(-time.Hour)
-	c := &collector{executable: path, state: snapshot{Usage: result{Data: map[string]any{"old": true}, Updated: old}}}
+	c := &collector{executable: path, openRouterKey: "test-key", httpClient: openRouter.Client(), state: snapshot{Usage: result{Data: map[string]any{"old": true}, Updated: old}}}
 	c.refresh(context.Background())
 	s := c.snapshot()
 	if s.Account.Error != "" || s.Limits.Error != "" || s.Limits.Updated.IsZero() {
@@ -195,6 +204,9 @@ done
 	}
 	if s.Usage.Error == "" || s.Usage.Data["old"] != true || !s.Usage.Updated.Equal(old) {
 		t.Fatalf("stale activity lost: %+v", s.Usage)
+	}
+	if s.OpenRouterKey.Error != "" || s.OpenRouterKey.Data["usage_monthly"] != float64(7) {
+		t.Fatalf("OpenRouter refresh was canceled by Codex cleanup: %+v", s.OpenRouterKey)
 	}
 }
 func TestCollectorCancellation(t *testing.T) {

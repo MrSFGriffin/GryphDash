@@ -74,6 +74,8 @@ func main() {
 		executable = "codex"
 	}
 	c := &collector{executable: executable}
+	c.openRouterKey = os.Getenv("OPENROUTER_API_KEY")
+	c.httpClient = &http.Client{Timeout: 15 * time.Second}
 	done := make(chan struct{})
 	go func() { defer close(done); c.run(ctx, interval) }()
 
