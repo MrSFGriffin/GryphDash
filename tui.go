@@ -30,6 +30,8 @@ type tuiModel struct {
 	width, focus         int
 	selected             []string
 	picker               bool
+	pickerGroup          int
+	pickerGroups         []string
 	ready                bool
 	layouts              []tuiNamedLayout
 	activeLayout         string
@@ -65,17 +67,28 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "esc", "a", "q":
 				m.picker = false
+			case "left", "shift+tab":
+				if len(m.pickerGroups) > 0 {
+					m.pickerGroup = (m.pickerGroup + len(m.pickerGroups) - 1) % len(m.pickerGroups)
+					m.focus = 0
+				}
+			case "right", "tab":
+				if len(m.pickerGroups) > 0 {
+					m.pickerGroup = (m.pickerGroup + 1) % len(m.pickerGroups)
+					m.focus = 0
+				}
 			case "up", "k":
 				if m.focus > 0 {
 					m.focus--
 				}
 			case "down", "j":
-				if m.focus < len(m.available.Widgets)-1 {
+				if m.focus < len(m.pickerWidgets())-1 {
 					m.focus++
 				}
 			case "enter", " ":
-				if len(m.available.Widgets) > 0 {
-					m.toggle(m.available.Widgets[m.focus].ID)
+				widgets := m.pickerWidgets()
+				if len(widgets) > 0 {
+					m.toggle(widgets[m.focus].ID)
 				}
 			}
 			return m, nil
@@ -85,6 +98,8 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "a":
 			m.picker = true
+			m.pickerGroups = m.availableGroups()
+			m.pickerGroup = 0
 			m.focus = 0
 		case "d", "x", "delete":
 			m.remove()
@@ -148,6 +163,33 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tuiTick()
 	}
 	return m, nil
+}
+
+func (m tuiModel) availableGroups() []string {
+	groups := map[string]bool{}
+	for _, w := range m.available.Widgets {
+		groups[w.Group] = true
+	}
+	out := []string{"All"}
+	names := make([]string, 0, len(groups))
+	for name := range groups {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return append(out, names...)
+}
+func (m tuiModel) pickerWidgets() []widget {
+	if m.pickerGroup <= 0 || m.pickerGroup >= len(m.pickerGroups) {
+		return m.available.Widgets
+	}
+	group := m.pickerGroups[m.pickerGroup]
+	out := make([]widget, 0)
+	for _, w := range m.available.Widgets {
+		if w.Group == group {
+			out = append(out, w)
+		}
+	}
+	return out
 }
 
 func (m tuiModel) updateName(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -495,10 +537,21 @@ func (m tuiModel) View() string {
 func (m tuiModel) pickerView() string {
 	var b strings.Builder
 	b.WriteString(tuiTitle.Render("Add or remove widgets"))
-	b.WriteString("  ")
-	b.WriteString(tuiDim.Render("↑/↓ choose • Enter toggle • Esc close"))
+	b.WriteString("\n")
+	for i, group := range m.pickerGroups {
+		label := " " + group + " "
+		if i == m.pickerGroup {
+			label = "[" + group + "]"
+		}
+		b.WriteString(label)
+		if i < len(m.pickerGroups)-1 {
+			b.WriteString("  ")
+		}
+	}
 	b.WriteString("\n\n")
-	for i, w := range m.available.Widgets {
+	b.WriteString(tuiDim.Render("←/→ or Tab groups • ↑/↓ choose • Enter toggle • Esc close"))
+	b.WriteString("\n\n")
+	for i, w := range m.pickerWidgets() {
 		marker := "  "
 		for _, id := range m.selected {
 			if id == w.ID {

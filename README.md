@@ -31,7 +31,8 @@ reads metrics, and stops it. No model tasks are started or earned resets redeeme
 To use the terminal dashboard instead, run `go run . tui` (or `./bin/gryphdash tui`
 after building). It uses the same provider collectors and widget catalog, refreshes
 on the configured interval, and runs in a full-screen Bubble Tea interface styled
-with Lip Gloss. Press `a` to open the widget picker, use arrows to focus, use
+with Lip Gloss. Press `a` to open the widget picker; use left/right or Tab to move
+between the All tab and provider-group tabs, and arrows to focus widgets. Use
 Shift+left/right to reorder widgets, `d` to remove the focused widget, `r` to restore defaults,
 `n` to name the current layout, and `m` to manage saved layouts. Press `q`, `Esc`,
 or Ctrl+C to quit. The selection, order, and named layouts are saved in
