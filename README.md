@@ -262,6 +262,13 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags desktop,production \
   -o bin/gryphdash-desktop-windows-amd64.exe ./cmd/gryphdash-desktop
 ```
 
+From Linux, the Wails build script packages the Windows executable with the
+checked-in Gryph logo:
+
+```sh
+./build-windows.sh
+```
+
 The desktop server uses `GRYPHDASH_DESKTOP_ADDR`, defaulting to
 `127.0.0.1:8081`. The Wails WebView proxies the same dashboard HTTP origin,
 including the existing JSON API and browser layout storage.

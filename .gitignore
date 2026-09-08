@@ -31,6 +31,10 @@ go.work.sum
 /bin/
 /gryphdash
 
+# Wails desktop build output.
+/cmd/gryphdash-desktop/build/
+/cmd/gryphdash-desktop/frontend/
+
 # Editor/IDE
 # .idea/
 # .vscode/
