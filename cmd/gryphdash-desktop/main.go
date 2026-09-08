@@ -12,13 +12,16 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/menu"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"gryphdash/internal/app"
 	"gryphdash/internal/collector"
 	"gryphdash/internal/config"
+	"gryphdash/internal/desktop"
 	webhandler "gryphdash/internal/web"
 	webassets "gryphdash/web"
 )
@@ -30,6 +33,18 @@ const desktopStartupTimeout = 5 * time.Second
 //
 //go:embed build/appicon.png
 var gryphDashIcon []byte
+
+// Windows' tray API requires an ICO file. The PNG remains the source for
+// Wails/Linux/macOS, while the multi-size ICO is selected by tray_icon_windows.go.
+//
+//go:embed build/appicon.ico
+var gryphDashIconICO []byte
+
+type wailsWindow struct{}
+
+func (wailsWindow) Show(ctx context.Context) { wailsruntime.Show(ctx) }
+func (wailsWindow) Hide(ctx context.Context) { wailsruntime.Hide(ctx) }
+func (wailsWindow) Quit(ctx context.Context) { wailsruntime.Quit(ctx) }
 
 func main() {
 	cfg, err := config.LoadDesktop()
@@ -70,15 +85,39 @@ func main() {
 		os.Exit(1)
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
+	var wailsContext context.Context
+	wailsContextReady := make(chan struct{})
+	contextFn := func() context.Context {
+		<-wailsContextReady
+		return wailsContext
+	}
+	windowController := desktop.NewController(wailsWindow{}, true, desktop.Actions{
+		Refresh: func(ctx context.Context) { serverRuntime.Collector().Refresh(ctx) },
+	})
+	go runTray(gryphDashIcon, windowController, contextFn, func() {})
+	nativeMenu := menu.NewMenu()
+	nativeMenu.AddText("Refresh Now", nil, func(*menu.CallbackData) {
+		windowController.Refresh(contextFn())
+	})
 	err = wails.Run(&options.App{
-		Title:       "GryphDash",
-		Width:       1200,
-		Height:      800,
-		MinWidth:    800,
-		MinHeight:   600,
-		AssetServer: &assetserver.Options{Handler: proxy},
-		Linux:       &linux.Options{Icon: gryphDashIcon},
+		Title:             "GryphDash",
+		Width:             1200,
+		Height:            800,
+		MinWidth:          800,
+		MinHeight:         600,
+		HideWindowOnClose: false,
+		AssetServer:       &assetserver.Options{Handler: proxy},
+		Linux:             &linux.Options{Icon: gryphDashIcon},
+		Menu:              nativeMenu,
+		OnBeforeClose: func(ctx context.Context) bool {
+			return windowController.BeforeClose(ctx)
+		},
+		OnStartup: func(ctx context.Context) {
+			wailsContext = ctx
+			close(wailsContextReady)
+		},
 		OnShutdown: func(shutdownContext context.Context) {
+			stopTray()
 			if err := serverRuntime.Shutdown(shutdownContext); err != nil {
 				log.Printf("desktop runtime shutdown: %v", err)
 			}

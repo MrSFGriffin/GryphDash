@@ -277,3 +277,11 @@ the platform application. Linux application menus may additionally require a
 The desktop server uses `GRYPHDASH_DESKTOP_ADDR`, defaulting to
 `127.0.0.1:8081`. The Wails WebView proxies the same dashboard HTTP origin,
 including the existing JSON API and browser layout storage.
+
+Closing the desktop window hides it to the system tray while the collector and
+dashboard server continue running. Use the tray icon to show the dashboard,
+refresh data immediately, or quit GryphDash. The native application menu keeps
+Refresh Now available without adding window-level Show or Quit controls. Quit
+is the explicit shutdown path and cleanly stops the tray, server, collector,
+and provider subprocesses. Native tray support is included in Wails builds
+using the `desktop` build tag; ordinary repository tests use a portable stub.
