@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"gryphdash/internal/collector"
@@ -13,10 +14,14 @@ import (
 )
 
 type Runtime struct {
+	mu        sync.Mutex
 	collector *collector.Collector
 	server    *http.Server
 	interval  time.Duration
 	listen    func(network, address string) (net.Listener, error)
+	cancel    context.CancelFunc
+	done      chan struct{}
+	running   bool
 }
 
 type Options struct {
@@ -64,6 +69,26 @@ func NewDesktop(options Options) (*Runtime, error) {
 func (r *Runtime) Collector() *collector.Collector { return r.collector }
 
 func (r *Runtime) Run(ctx context.Context) error {
+	r.mu.Lock()
+	if r.running {
+		r.mu.Unlock()
+		return errors.New("runtime is already running")
+	}
+	runningCtx, cancel := context.WithCancel(ctx)
+	r.cancel = cancel
+	r.done = make(chan struct{})
+	r.running = true
+	done := r.done
+	r.mu.Unlock()
+	defer func() {
+		cancel()
+		r.mu.Lock()
+		r.cancel = nil
+		r.running = false
+		close(done)
+		r.mu.Unlock()
+	}()
+
 	listen := r.listen
 	if listen == nil {
 		listen = net.Listen
@@ -72,15 +97,13 @@ func (r *Runtime) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("HTTP server cannot listen on %s: %w", r.server.Addr, err)
 	}
-	runCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
 	collectorDone := make(chan struct{})
 	go func() {
 		defer close(collectorDone)
-		r.collector.Run(runCtx, r.interval)
+		r.collector.Run(runningCtx, r.interval)
 	}()
 	go func() {
-		<-runCtx.Done()
+		<-runningCtx.Done()
 		shutdown, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer shutdownCancel()
 		_ = r.server.Shutdown(shutdown)
@@ -94,4 +117,25 @@ func (r *Runtime) Run(ctx context.Context) error {
 	}
 	<-collectorDone
 	return nil
+}
+
+// Shutdown requests an orderly stop and waits for the HTTP server, collector
+// refresh loop, and any provider subprocesses to finish. It is safe to call
+// more than once, including from a Wails shutdown callback and its caller.
+func (r *Runtime) Shutdown(ctx context.Context) error {
+	r.mu.Lock()
+	cancel := r.cancel
+	done := r.done
+	running := r.running
+	r.mu.Unlock()
+	if !running {
+		return nil
+	}
+	cancel()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

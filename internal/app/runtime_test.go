@@ -19,6 +19,17 @@ func (emptyReader) Read(context.Context) map[string]collector.Result {
 	return nil
 }
 
+type cancellationReader struct {
+	started chan struct{}
+}
+
+func (r cancellationReader) Name() string { return "cancellation" }
+func (r cancellationReader) Read(ctx context.Context) map[string]collector.Result {
+	close(r.started)
+	<-ctx.Done()
+	return nil
+}
+
 func TestRuntimeStartsAndShutsDown(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -70,6 +81,53 @@ func TestRuntimeStartsAndShutsDown(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("runtime did not shut down")
+	}
+}
+
+func TestRuntimeShutdownWaitsForCollector(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+
+	started := make(chan struct{})
+	runtime, err := New(Options{
+		Collector: collector.New(collector.Options{Providers: []collector.Reader{cancellationReader{started}}}),
+		Handler:   http.NotFoundHandler(),
+		Address:   listener.Addr().String(),
+		Interval:  time.Hour,
+		Listen: func(string, string) (net.Listener, error) {
+			return listener, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runDone := make(chan error, 1)
+	go func() { runDone <- runtime.Run(context.Background()) }()
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("collector did not start")
+	}
+
+	shutdownContext, shutdownCancel := context.WithTimeout(context.Background(), time.Second)
+	defer shutdownCancel()
+	if err := runtime.Shutdown(shutdownContext); err != nil {
+		t.Fatal(err)
+	}
+	if err := runtime.Shutdown(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-runDone:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("runtime did not finish after shutdown")
 	}
 }
 

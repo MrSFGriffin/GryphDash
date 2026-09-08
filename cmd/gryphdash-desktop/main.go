@@ -58,14 +58,14 @@ func main() {
 	runtimeErrors := make(chan error, 1)
 	go func() { runtimeErrors <- serverRuntime.Run(ctx) }()
 	if err := waitForServer(cfg.DesktopAddress, runtimeErrors); err != nil {
-		cancel()
+		shutdownDesktopRuntime(serverRuntime)
 		log.Print(err)
 		os.Exit(1)
 	}
 
 	target, err := url.Parse("http://" + cfg.DesktopAddress)
 	if err != nil {
-		cancel()
+		shutdownDesktopRuntime(serverRuntime)
 		log.Print(err)
 		os.Exit(1)
 	}
@@ -78,18 +78,28 @@ func main() {
 		MinHeight:   600,
 		AssetServer: &assetserver.Options{Handler: proxy},
 		Linux:       &linux.Options{Icon: gryphDashIcon},
-		OnShutdown: func(context.Context) {
-			cancel()
+		OnShutdown: func(shutdownContext context.Context) {
+			if err := serverRuntime.Shutdown(shutdownContext); err != nil {
+				log.Printf("desktop runtime shutdown: %v", err)
+			}
 		},
 	})
 	if err != nil {
-		cancel()
+		shutdownDesktopRuntime(serverRuntime)
 		log.Print(err)
 		os.Exit(1)
 	}
 	if err := <-runtimeErrors; err != nil {
 		log.Print(err)
 		os.Exit(1)
+	}
+}
+
+func shutdownDesktopRuntime(runtime *app.Runtime) {
+	shutdownContext, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+	if err := runtime.Shutdown(shutdownContext); err != nil {
+		log.Printf("desktop runtime shutdown: %v", err)
 	}
 }
 
