@@ -12,6 +12,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"gryphdash/internal/config"
 )
 
 type tuiTickMsg struct{}
@@ -43,12 +44,12 @@ type tuiModel struct {
 }
 
 func runTUI(ctx context.Context) error {
-	interval, err := refreshInterval()
+	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
-	c := newCollector()
-	go c.run(ctx, interval)
+	c := newCollector(cfg)
+	go c.Run(ctx, cfg.RefreshInterval)
 	selected, layouts, active := loadTUILayout()
 	m := tuiModel{collector: c, selected: selected, layouts: layouts, activeLayout: active}
 	_, err = tea.NewProgram(m, tea.WithContext(ctx), tea.WithAltScreen()).Run()
@@ -148,7 +149,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 	case tuiTickMsg:
-		snapshot := m.collector.snapshot()
+		snapshot := m.collector.Snapshot()
 		if !snapshotReady(snapshot) {
 			return m, tuiTick()
 		}
@@ -459,14 +460,14 @@ func (m *tuiModel) reorder(dx, dy int) {
 }
 func (m *tuiModel) defaults() {
 	m.selected = nil
-	for _, w := range buildDashboard(m.collector.snapshot()).Widgets {
+	for _, w := range buildDashboard(m.collector.Snapshot()).Widgets {
 		if w.Default {
 			m.selected = append(m.selected, w.ID)
 		}
 	}
 	m.focus = 0
 	m.save()
-	m.available = buildDashboard(m.collector.snapshot())
+	m.available = buildDashboard(m.collector.Snapshot())
 	m.dashboard = m.apply(m.available)
 }
 func (m tuiModel) apply(d dashboard) dashboard {
