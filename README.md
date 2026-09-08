@@ -1,9 +1,9 @@
-<h1><img src="logo.svg" alt="GryphDash logo" width="32" height="32"> GryphDash</h1>
+<h1><img src="web/logo.svg" alt="GryphDash logo" width="32" height="32"> GryphDash</h1>
 
 A customizable widget dashboard for metrics from multiple providers. The Go server
 uses only the standard library and embeds all HTML, CSS, and JavaScript, including
 GridStack, in a single executable. Live metrics require the Codex CLI on the same
-machine. Widget definitions live in the embedded [`widgets.json`](widgets.json)
+machine. Widget definitions live in the embedded [`widgets.json`](internal/dashboard/widgets.json)
 catalog, so adding a metric does not require editing the dashboard renderer.
 OpenRouter widgets use the optional `OPENROUTER_API_KEY` when it is configured.
 
@@ -65,7 +65,7 @@ initial selection is shown; all other metrics can be added from the picker.
 
 ## Widget catalog
 
-`widgets.json` is the source of truth for the widget picker. Each definition has a
+[`widgets.json`](internal/dashboard/widgets.json) is the source of truth for the widget picker. Each definition has a
 stable `id`, `group`, display `name`, user-facing `description`, default layout
 size/visibility, and `logic`. Logic names are interpreted by the server: `scalar`
 reads a dotted field from an account, limits, or usage response; `limitWindow`
@@ -81,7 +81,7 @@ browser layouts continue to work.
 ## Add custom widgets
 
 Widget definitions are data-driven. To add a metric from a provider that is
-already supported, add an entry to [`widgets.json`](widgets.json); do not edit
+already supported, add an entry to [`widgets.json`](internal/dashboard/widgets.json); do not edit
 the web or TUI renderers. Each entry needs a stable `id`, `group`, `name`,
 `description`, `width`, `height`, and `logic` object. For example:
 
@@ -241,3 +241,27 @@ and test execution to use its fallback build. Tests use port 18091 by default
 (override with `GRYPHDASH_TEST_PORT`). Screenshots are written under `/tmp`.
 
 See [LOGO.md](LOGO.md) for the logo's provenance, license, and preparation process.
+
+## Desktop development
+
+The Wails v2 desktop command owns the collector and a loopback-only dashboard
+server, then opens that server through a native WebView:
+
+```sh
+cd cmd/gryphdash-desktop
+wails dev
+wails build
+```
+
+The direct Windows Go build must include Wails' `desktop` and `production`
+tags, plus the Windows GUI linker flag:
+
+```sh
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags desktop,production \
+  -ldflags "-w -s -H windowsgui" \
+  -o bin/gryphdash-desktop-windows-amd64.exe ./cmd/gryphdash-desktop
+```
+
+The desktop server uses `GRYPHDASH_DESKTOP_ADDR`, defaulting to
+`127.0.0.1:8081`. The Wails WebView proxies the same dashboard HTTP origin,
+including the existing JSON API and browser layout storage.
