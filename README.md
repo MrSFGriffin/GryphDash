@@ -269,6 +269,11 @@ checked-in Gryph logo:
 ./build-windows.sh
 ```
 
+The desktop app uses the same Gryph logo for its native Linux and macOS window
+icons, and Wails uses `cmd/gryphdash-desktop/build/appicon.png` when packaging
+the platform application. Linux application menus may additionally require a
+`.desktop` launcher that references the icon.
+
 The desktop server uses `GRYPHDASH_DESKTOP_ADDR`, defaulting to
 `127.0.0.1:8081`. The Wails WebView proxies the same dashboard HTTP origin,
 including the existing JSON API and browser layout storage.

@@ -31,8 +31,9 @@ go.work.sum
 /bin/
 /gryphdash
 
-# Wails desktop build output.
-/cmd/gryphdash-desktop/build/
+# Wails desktop build output, except the source application icon.
+/cmd/gryphdash-desktop/build/*
+!/cmd/gryphdash-desktop/build/appicon.png
 /cmd/gryphdash-desktop/frontend/
 
 # Editor/IDE

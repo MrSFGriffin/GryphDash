@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"log"
 	"net"
@@ -13,6 +14,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 
 	"gryphdash/internal/app"
 	"gryphdash/internal/collector"
@@ -22,6 +24,12 @@ import (
 )
 
 const desktopStartupTimeout = 5 * time.Second
+
+// gryphDashIcon is used by Wails for the native Linux window icon. The same
+// source image is also used by the Wails packager for macOS and Windows icons.
+//
+//go:embed build/appicon.png
+var gryphDashIcon []byte
 
 func main() {
 	cfg, err := config.LoadDesktop()
@@ -69,6 +77,7 @@ func main() {
 		MinWidth:    800,
 		MinHeight:   600,
 		AssetServer: &assetserver.Options{Handler: proxy},
+		Linux:       &linux.Options{Icon: gryphDashIcon},
 		OnShutdown: func(context.Context) {
 			cancel()
 		},
