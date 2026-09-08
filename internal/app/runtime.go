@@ -3,11 +3,13 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
 
 	"gryphdash/internal/collector"
+	"gryphdash/internal/config"
 )
 
 type Runtime struct {
@@ -52,6 +54,13 @@ func New(options Options) (*Runtime, error) {
 	}, nil
 }
 
+func NewDesktop(options Options) (*Runtime, error) {
+	if err := config.ValidateDesktopAddress(options.Address); err != nil {
+		return nil, err
+	}
+	return New(options)
+}
+
 func (r *Runtime) Collector() *collector.Collector { return r.collector }
 
 func (r *Runtime) Run(ctx context.Context) error {
@@ -61,7 +70,7 @@ func (r *Runtime) Run(ctx context.Context) error {
 	}
 	listener, err := listen("tcp", r.server.Addr)
 	if err != nil {
-		return err
+		return fmt.Errorf("HTTP server cannot listen on %s: %w", r.server.Addr, err)
 	}
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()

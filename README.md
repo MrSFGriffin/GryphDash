@@ -182,6 +182,7 @@ and [credits documentation](https://openrouter.ai/docs/api/api-reference/credits
 | Environment variable | Default | Meaning |
 | --- | --- | --- |
 | `GRYPHDASH_ADDR` | `127.0.0.1:8080` | HTTP listen address |
+| `GRYPHDASH_DESKTOP_ADDR` | `127.0.0.1:8081` | Desktop HTTP listen address; must remain loopback-only |
 | `GRYPHDASH_CODEX_BIN` | `codex` | CLI executable name or full path (not shell arguments) |
 | `GRYPHDASH_REFRESH_INTERVAL` | `1m` | Delay after each polling cycle; minimum `30s` |
 | `OPENROUTER_API_KEY` | unset | Bearer key for OpenRouter key usage and credits requests |
