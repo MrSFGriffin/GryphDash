@@ -24,6 +24,7 @@ import (
 	"gryphdash/internal/config"
 	"gryphdash/internal/desktop"
 	"gryphdash/internal/logging"
+	"gryphdash/internal/subprocess"
 	webhandler "gryphdash/internal/web"
 	codexprovider "gryphdash/providers/codex"
 	openrouterprovider "gryphdash/providers/openrouter"
@@ -64,12 +65,19 @@ func main() {
 		log.Print(err)
 		os.Exit(1)
 	}
-	collectorInstance := collector.New(collector.Options{
-		Providers: []collector.Reader{
-			codexprovider.NewAdapter(cfg.CodexExecutable),
-			openrouterprovider.NewAdapter(cfg.OpenRouterKey, &http.Client{Timeout: 15 * time.Second}),
-		},
-	})
+	providers := []collector.Reader{
+		codexprovider.NewAdapter(cfg.CodexExecutable),
+		openrouterprovider.NewAdapter(cfg.OpenRouterKey, &http.Client{Timeout: 15 * time.Second}),
+	}
+	externalProviders, discoverErr := subprocess.Discover(cfg.ProviderDirectory)
+	if discoverErr != nil {
+		log.Printf("external provider discovery: %v", discoverErr)
+	} else {
+		for _, provider := range externalProviders {
+			providers = append(providers, provider)
+		}
+	}
+	collectorInstance := collector.New(collector.Options{Providers: providers})
 	serverRuntime, err := app.NewDesktop(app.Options{
 		Collector: collectorInstance,
 		Handler:   webhandler.NewHandler(collectorInstance, webassets.FS),
@@ -143,9 +151,6 @@ func main() {
 	desktopMenu.AddText("Refresh Now", nil, func(*menu.CallbackData) {
 		windowController.Refresh(contextFn())
 	})
-	desktopMenu.AddText("Preferences…", nil, func(*menu.CallbackData) {
-		wailsruntime.EventsEmit(contextFn(), "gryphdash:open-preferences")
-	})
 	desktopMenu.AddText("Open Configuration", nil, func(*menu.CallbackData) {
 		if err := desktopBridge.OpenConfiguration(); err != nil {
 			log.Printf("open configuration: %v", err)
@@ -155,6 +160,9 @@ func main() {
 		if err := desktopBridge.OpenLogs(); err != nil {
 			log.Printf("open logs: %v", err)
 		}
+	})
+	desktopMenu.AddText("Preferences…", nil, func(*menu.CallbackData) {
+		wailsruntime.EventsEmit(contextFn(), "gryphdash:open-preferences")
 	})
 	desktopMenu.AddSeparator()
 	desktopMenu.AddText("Quit", nil, func(*menu.CallbackData) {

@@ -145,6 +145,29 @@ Provider API clients, adapters, normalization, and their tests belong under
 the adapter and passing it to the collector. Do not add provider-specific
 fields, imports, response parsing, or source switches to `internal/collector`.
 
+### External subprocess providers
+
+External providers use a line-delimited JSON protocol on standard input and
+output. The host sends `{"version":1,"method":"read"}` and expects one
+response containing the provider name and namespaced results, each with `data`,
+`updated`, and optional `error` fields. The host starts one subprocess per
+refresh, applies a timeout, and keeps provider failures isolated from the other
+readers.
+
+The first example provider reads Frankfurter exchange rates without an API key.
+Build it beside the main binary (the default discovery location):
+
+```sh
+go build -o bin/gryphdash-provider-currency ./cmd/gryphdash-provider-currency
+GRYPHDASH_PROVIDER_DIR="$PWD/bin" ./bin/gryphdash
+```
+
+It publishes EUR/USD, EUR/GBP, and EUR/HUF widgets. Override the pairs with
+`GRYPHDASH_CURRENCY_PAIRS=USD/EUR,EUR/JPY`, or point tests at a fixture with
+`GRYPHDASH_CURRENCY_URL`. Provider executables own their API calls, response
+parsing, source names, and credentials; the collector only understands the
+generic subprocess protocol.
+
 ## Metrics
 
 - Account plan and authentication type.
@@ -188,6 +211,7 @@ and [credits documentation](https://openrouter.ai/docs/api/api-reference/credits
 | `GRYPHDASH_ADDR` | `127.0.0.1:8080` | HTTP listen address |
 | `GRYPHDASH_DESKTOP_ADDR` | `127.0.0.1:8081` | Desktop HTTP listen address; must remain loopback-only |
 | `GRYPHDASH_CODEX_BIN` | `codex` | CLI executable name or full path (not shell arguments) |
+| `GRYPHDASH_PROVIDER_DIR` | executable directory | Directory containing `gryphdash-provider-*` external provider executables |
 | `GRYPHDASH_REFRESH_INTERVAL` | `1m` | Delay after each polling cycle; minimum `30s` |
 | `OPENROUTER_API_KEY` | unset | Bearer key for OpenRouter key usage and credits requests |
 
@@ -299,8 +323,8 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags desktop,production \
   -o bin/gryphdash-desktop-windows-amd64.exe ./cmd/gryphdash-desktop
 ```
 
-From Linux, the Wails build script packages the Windows executable with the
-checked-in Gryph logo:
+From Linux, the Wails build script packages the Windows desktop executable with
+the checked-in Gryph logo and cross-compiles the currency provider alongside it:
 
 ```sh
 ./build-windows.sh

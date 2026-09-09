@@ -6,6 +6,7 @@ repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 desktop_dir="$repo_root/cmd/gryphdash-desktop"
 output_dir="$repo_root/bin"
 output_file="$output_dir/gryphdash-desktop-windows-amd64.exe"
+currency_output_file="$output_dir/gryphdash-provider-currency-windows-amd64.exe"
 
 mkdir -p "$output_dir"
 
@@ -20,3 +21,8 @@ mkdir -p "$output_dir"
 
 cp "$desktop_dir/build/bin/gryphdash-desktop.exe" "$output_file"
 printf 'Built %s\n' "$output_file"
+
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build \
+  -o "$currency_output_file" \
+  ./cmd/gryphdash-provider-currency
+printf 'Built %s\n' "$currency_output_file"

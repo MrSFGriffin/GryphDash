@@ -78,7 +78,7 @@ func TestDashboardMetrics(t *testing.T) {
 		t.Fatalf("widget catalog unexpectedly small: %d", len(configuredWidgetCatalog.Widgets))
 	}
 	for _, c := range configuredWidgetCatalog.Widgets {
-		if c.Group != "Codex" && c.Group != "OpenRouter" {
+		if c.Group != "Codex" && c.Group != "OpenRouter" && c.Group != "Currency" {
 			t.Fatalf("unexpected widget group %q", c.Group)
 		}
 	}

@@ -332,6 +332,36 @@
       "width": 4,
       "height": 4,
       "logic": { "type": "scalar", "source": "openrouter/credits", "path": "total_usage", "url": "https://openrouter.ai/api/v1/credits", "method": "GET" }
+    },
+    {
+      "id": "currency/eur-usd",
+      "group": "Currency",
+      "name": "EUR/USD exchange rate",
+      "description": "US dollars per euro · Frankfurter reference rate",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "source": "currency/eur-usd", "path": "rate", "url": "https://api.frankfurter.dev/v2/rate/EUR/USD", "method": "GET" }
+    },
+    {
+      "id": "currency/eur-gbp",
+      "group": "Currency",
+      "name": "EUR/GBP exchange rate",
+      "description": "British pounds per euro · Frankfurter reference rate",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "source": "currency/eur-gbp", "path": "rate", "url": "https://api.frankfurter.dev/v2/rate/EUR/GBP", "method": "GET" }
+    },
+    {
+      "id": "currency/eur-huf",
+      "group": "Currency",
+      "name": "EUR/HUF exchange rate",
+      "description": "Hungarian forints per euro · Frankfurter reference rate",
+      "default": false,
+      "width": 4,
+      "height": 4,
+      "logic": { "type": "scalar", "source": "currency/eur-huf", "path": "rate", "url": "https://api.frankfurter.dev/v2/rate/EUR/HUF", "method": "GET" }
     }
   ]
 }

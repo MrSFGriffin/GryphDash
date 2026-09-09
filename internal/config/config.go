@@ -17,11 +17,12 @@ const (
 )
 
 type Config struct {
-	Address         string
-	DesktopAddress  string
-	CodexExecutable string
-	OpenRouterKey   string
-	RefreshInterval time.Duration
+	Address           string
+	DesktopAddress    string
+	CodexExecutable   string
+	OpenRouterKey     string
+	ProviderDirectory string
+	RefreshInterval   time.Duration
 }
 
 func Load() (Config, error) {
@@ -45,11 +46,12 @@ func LoadDesktopFrom(getenv func(string) string) (Config, error) {
 
 func LoadFrom(getenv func(string) string) (Config, error) {
 	c := Config{
-		Address:         getenv("GRYPHDASH_ADDR"),
-		DesktopAddress:  getenv("GRYPHDASH_DESKTOP_ADDR"),
-		CodexExecutable: getenv("GRYPHDASH_CODEX_BIN"),
-		OpenRouterKey:   getenv("OPENROUTER_API_KEY"),
-		RefreshInterval: DefaultRefreshInterval,
+		Address:           getenv("GRYPHDASH_ADDR"),
+		DesktopAddress:    getenv("GRYPHDASH_DESKTOP_ADDR"),
+		CodexExecutable:   getenv("GRYPHDASH_CODEX_BIN"),
+		OpenRouterKey:     getenv("OPENROUTER_API_KEY"),
+		ProviderDirectory: getenv("GRYPHDASH_PROVIDER_DIR"),
+		RefreshInterval:   DefaultRefreshInterval,
 	}
 	if c.Address == "" {
 		c.Address = DefaultAddress
