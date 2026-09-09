@@ -67,4 +67,8 @@ input { width: 100%; background: #10151e; border: 1px solid #445166; border-radi
 .picker-row p { margin: 0; overflow-wrap: anywhere; } .picker-row button { flex-shrink: 0; }
 #layout-select { background: #182235; border: 1px solid #40506a; border-radius: 7px; color: #dce7f5; padding: 9px 10px; }
 .layout-label { color: #a7b3c6; font-size: .8rem; margin-left: 4px; }
+fieldset { border: 1px solid #303b4b; border-radius: 12px; margin: 0 0 18px; padding: 14px 16px; }
+legend { color: #a6e4cc; padding: 0 8px; }
+.preference-row { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: #dce7f5; }
+.preference-row input { width: auto; accent-color: #a6e4cc; }
 @media (max-width: 700px) { main { padding: 26px 12px; } .page-header { padding: 0 8px; } .toolbar { gap: 8px; } button { font-size: .85rem; } h1 { font-size: 2.1rem; } .value { font-size: 2rem; } }

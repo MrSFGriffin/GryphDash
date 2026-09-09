@@ -125,12 +125,15 @@ func main() {
 		Refresh: func(context.Context) { refreshNow() },
 	})
 	desktopBridge := &DesktopBridge{controller: windowController, contextFn: contextFn, settingsPath: settingsPath, settings: settings, launchAtLogin: launchAtLogin}
-	notificationMonitor := desktop.NewNotificationMonitor(wailsNotifier{}, 30*time.Minute, 5*time.Minute, desktopBridge.NotificationsEnabled)
+	notificationMonitor := desktop.NewNotificationMonitor(wailsNotifier{}, 30*time.Minute, 5*time.Minute, desktopBridge.NotificationPreferences)
 	go runTray(gryphDashIcon, windowController, contextFn, func() {})
 	nativeMenu := menu.NewMenu()
 	desktopMenu := nativeMenu.AddSubmenu("File")
 	desktopMenu.AddText("Refresh Now", nil, func(*menu.CallbackData) {
 		windowController.Refresh(contextFn())
+	})
+	desktopMenu.AddText("Preferences…", nil, func(*menu.CallbackData) {
+		wailsruntime.EventsEmit(contextFn(), "gryphdash:open-preferences")
 	})
 	err = wails.Run(&options.App{
 		Title:             "GryphDash",

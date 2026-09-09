@@ -18,9 +18,6 @@
         <button id="edit-layout" aria-pressed="false" disabled>Edit dashboard</button>
         <button id="save-layout" disabled>Create named layout</button>
         <button id="native-refresh" hidden>Refresh now</button>
-        <button id="native-close-to-tray" hidden></button>
-        <button id="native-launch-login" hidden></button>
-        <button id="native-notifications" hidden></button>
         <label class="layout-label" for="layout-select">Layout</label><select id="layout-select" aria-label="Layout" disabled></select>
       </nav>
     </header>
@@ -37,6 +34,22 @@
     <input id="widget-search" type="search" placeholder="Search limits, credits, activity…" autocomplete="off">
     <div id="picker-tabs" role="tablist" aria-label="Widget groups"></div>
     <div id="widget-list"></div>
+  </dialog>
+  <dialog id="preferences" aria-labelledby="preferences-title">
+    <div class="dialog-header"><div><p class="eyebrow">DESKTOP SETTINGS</p><h2 id="preferences-title">Preferences</h2></div><button id="close-preferences" type="button">Done</button></div>
+    <fieldset id="notification-preferences">
+      <legend>Notifications</legend>
+      <label class="preference-row"><input id="pref-notifications" type="checkbox"> Enable desktop notifications</label>
+      <label class="preference-row"><input id="pref-failures" type="checkbox"> Provider failures</label>
+      <label class="preference-row"><input id="pref-recovery" type="checkbox"> Provider recovery</label>
+      <label class="preference-row"><input id="pref-stale" type="checkbox"> Prolonged stale data</label>
+    </fieldset>
+    <fieldset>
+      <legend>Application</legend>
+      <label class="preference-row"><input id="pref-close-to-tray" type="checkbox"> Close window to the system tray</label>
+      <label class="preference-row"><input id="pref-launch-login" type="checkbox"> Launch GryphDash at login</label>
+    </fieldset>
+    <p id="preferences-status" class="note" role="status"></p>
   </dialog>
 </body>
 </html>

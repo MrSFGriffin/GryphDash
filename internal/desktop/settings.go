@@ -11,10 +11,24 @@ type Settings struct {
 	CloseToTray          bool `json:"closeToTray"`
 	LaunchAtLogin        bool `json:"launchAtLogin"`
 	NotificationsEnabled bool `json:"notificationsEnabled"`
+	NotifyFailures       bool `json:"notifyFailures"`
+	NotifyRecovery       bool `json:"notifyRecovery"`
+	NotifyStale          bool `json:"notifyStale"`
+}
+
+type NotificationPreferences struct {
+	Enabled  bool `json:"enabled"`
+	Failures bool `json:"failures"`
+	Recovery bool `json:"recovery"`
+	Stale    bool `json:"stale"`
 }
 
 func DefaultSettings() Settings {
-	return Settings{CloseToTray: true, NotificationsEnabled: true}
+	return Settings{CloseToTray: true, NotificationsEnabled: true, NotifyFailures: true, NotifyRecovery: true, NotifyStale: true}
+}
+
+func (s Settings) NotificationPreferences() NotificationPreferences {
+	return NotificationPreferences{Enabled: s.NotificationsEnabled, Failures: s.NotifyFailures, Recovery: s.NotifyRecovery, Stale: s.NotifyStale}
 }
 
 func SettingsPath(appName string) (string, error) {

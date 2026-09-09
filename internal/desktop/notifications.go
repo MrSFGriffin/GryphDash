@@ -17,20 +17,34 @@ type NotificationMonitor struct {
 	lastNotification time.Time
 	minInterval      time.Duration
 	staleAfter       time.Duration
-	enabled          func() bool
+	preferences      func() NotificationPreferences
 }
 
-func NewNotificationMonitor(notifier Notifier, minInterval, staleAfter time.Duration, enabled func() bool) *NotificationMonitor {
-	return &NotificationMonitor{notifier: notifier, minInterval: minInterval, staleAfter: staleAfter, enabled: enabled}
+func NewNotificationMonitor(notifier Notifier, minInterval, staleAfter time.Duration, preferences func() NotificationPreferences) *NotificationMonitor {
+	return &NotificationMonitor{notifier: notifier, minInterval: minInterval, staleAfter: staleAfter, preferences: preferences}
 }
 
 func (m *NotificationMonitor) Observe(ctx context.Context, snapshot collector.Snapshot, now time.Time) {
-	if m.enabled != nil && !m.enabled() {
+	preferences := NotificationPreferences{Enabled: true, Failures: true, Recovery: true, Stale: true}
+	if m.preferences != nil {
+		preferences = m.preferences()
+	}
+	if !preferences.Enabled {
 		return
 	}
 	failed := snapshot.Account.Error != "" || snapshot.Limits.Error != "" || snapshot.Usage.Error != "" || snapshot.OpenRouterKey.Error != "" || snapshot.OpenRouterCredits.Error != ""
 	stale := !snapshot.LastRefresh.IsZero() && m.staleAfter > 0 && now.Sub(snapshot.LastRefresh) >= m.staleAfter
 	issue := failed || stale
+	if issue && !m.lastFailure && stale && !failed && !preferences.Stale {
+		return
+	}
+	if issue && !m.lastFailure && failed && !preferences.Failures {
+		return
+	}
+	if !issue && m.lastFailure && !preferences.Recovery {
+		m.lastFailure = false
+		return
+	}
 	if issue == m.lastFailure && (!issue || now.Sub(m.lastNotification) < m.minInterval) {
 		return
 	}

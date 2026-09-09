@@ -75,6 +75,23 @@ func (b *DesktopBridge) SetNotificationsEnabled(enabled bool) error {
 	return b.saveSettings(settings)
 }
 
+func (b *DesktopBridge) NotificationPreferences() desktop.NotificationPreferences {
+	b.settingsMu.RLock()
+	defer b.settingsMu.RUnlock()
+	return b.settings.NotificationPreferences()
+}
+
+func (b *DesktopBridge) SetNotificationPreferences(preferences desktop.NotificationPreferences) error {
+	b.settingsMu.Lock()
+	b.settings.NotificationsEnabled = preferences.Enabled
+	b.settings.NotifyFailures = preferences.Failures
+	b.settings.NotifyRecovery = preferences.Recovery
+	b.settings.NotifyStale = preferences.Stale
+	settings := b.settings
+	b.settingsMu.Unlock()
+	return b.saveSettings(settings)
+}
+
 func (b *DesktopBridge) saveSettings(settings desktop.Settings) error {
 	if b.settingsPath == "" {
 		return errors.New("desktop settings are unavailable")
