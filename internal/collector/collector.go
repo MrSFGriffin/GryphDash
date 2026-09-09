@@ -15,6 +15,7 @@ type Result = codexprovider.Result
 type Snapshot struct {
 	Account, Limits, Usage           Result
 	OpenRouterKey, OpenRouterCredits Result
+	LastRefresh                      time.Time
 }
 
 type Reader interface {
@@ -127,6 +128,7 @@ func (c *Collector) Refresh(parent context.Context) {
 			}
 		}
 	}
+	c.state.LastRefresh = time.Now().UTC()
 }
 
 func (c *Collector) Run(ctx context.Context, interval time.Duration) {

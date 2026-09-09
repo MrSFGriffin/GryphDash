@@ -74,7 +74,8 @@ type widget struct {
 	Resets   []resetCredit `json:"resets,omitempty"`
 }
 type dashboard struct {
-	Widgets []widget `json:"widgets"`
+	Widgets     []widget `json:"widgets"`
+	LastRefresh string   `json:"lastRefresh,omitempty"`
 }
 
 func loadWidgetCatalog() widgetCatalog {
@@ -263,6 +264,15 @@ func bucketID(template, bucket string) string {
 }
 func buildDashboard(s snapshot) dashboard {
 	out := dashboard{Widgets: []widget{}}
+	lastRefresh := s.LastRefresh
+	for _, r := range []result{s.Account, s.Limits, s.Usage, s.OpenRouterKey, s.OpenRouterCredits} {
+		if r.Updated.After(lastRefresh) {
+			lastRefresh = r.Updated
+		}
+	}
+	if !lastRefresh.IsZero() {
+		out.LastRefresh = lastRefresh.UTC().Format(time.RFC3339)
+	}
 	buckets := object(s.Limits.Data["rateLimitsByLimitId"])
 	if len(buckets) == 0 {
 		buckets = map[string]any{"codex": s.Limits.Data["rateLimits"]}

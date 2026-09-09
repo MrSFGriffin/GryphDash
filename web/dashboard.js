@@ -9,6 +9,8 @@
   let ready = false;
   let editing = false;
   let restoring = false;
+  let refreshInFlight = false;
+  let refreshRequested = false;
   let grid;
   let pickerGroup = 'All';
   let activeLayoutName = 'Unsaved layout';
@@ -240,7 +242,16 @@
       el.textContent = seconds ? `Resets in ${days ? days + 'd ' : ''}${hours}h ${minutes}m ${rest}s` : 'Awaiting updated window';
     });
   }
+  function formatRefreshTime(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Last refresh: unavailable' : `Last refresh: ${date.toISOString().replace('T', ' ').slice(0, 19)} UTC`;
+  }
   async function refresh() {
+    if (refreshInFlight) {
+      refreshRequested = true;
+      return;
+    }
+    refreshInFlight = true;
     try {
       const response = await fetch('/api/widgets', {cache: 'no-store', signal: AbortSignal.timeout(10000)});
       if (!response.ok) throw new Error('Dashboard request failed');
@@ -264,13 +275,24 @@
       for (const el of grid.getGridItems()) renderBody(el.querySelector('.grid-stack-item-content'), catalog.get(el.gridstackNode.id) || missingWidget(el.gridstackNode.id));
       $('connection-status').textContent = 'Connected · widget values refresh automatically';
       $('connection-status').classList.remove('stale');
+      $('last-refresh').textContent = data.lastRefresh ? formatRefreshTime(data.lastRefresh) : 'Last refresh: waiting for first refresh…';
+      $('last-refresh').classList.remove('stale');
       emptyState(); updateCountdowns();
     } catch (error) {
       $('connection-status').textContent = 'Dashboard connection lost. Displayed values may be stale; retrying automatically.';
       $('connection-status').classList.add('stale');
     } finally {
-      setTimeout(refresh, 15000);
+      refreshInFlight = false;
+      if (refreshRequested) {
+        refreshRequested = false;
+        setTimeout(refresh, 0);
+      } else {
+        setTimeout(refresh, 15000);
+      }
     }
+  }
+  if (window.runtime && typeof window.runtime.EventsOn === 'function') {
+    window.runtime.EventsOn('gryphdash:refresh-complete', refresh);
   }
   setInterval(updateCountdowns, 1000);
   refresh();

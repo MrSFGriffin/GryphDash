@@ -27,6 +27,7 @@ import (
 )
 
 const desktopStartupTimeout = 5 * time.Second
+const desktopRefreshCompleteEvent = "gryphdash:refresh-complete"
 
 // gryphDashIcon is used by Wails for the native Linux window icon. The same
 // source image is also used by the Wails packager for macOS and Windows icons.
@@ -91,12 +92,21 @@ func main() {
 		<-wailsContextReady
 		return wailsContext
 	}
+	refreshNow := func() {
+		go func() {
+			serverRuntime.Collector().Refresh(context.Background())
+			if ctx := contextFn(); ctx != nil {
+				wailsruntime.EventsEmit(ctx, desktopRefreshCompleteEvent)
+			}
+		}()
+	}
 	windowController := desktop.NewController(wailsWindow{}, true, desktop.Actions{
-		Refresh: func(ctx context.Context) { serverRuntime.Collector().Refresh(ctx) },
+		Refresh: func(context.Context) { refreshNow() },
 	})
 	go runTray(gryphDashIcon, windowController, contextFn, func() {})
 	nativeMenu := menu.NewMenu()
-	nativeMenu.AddText("Refresh Now", nil, func(*menu.CallbackData) {
+	desktopMenu := nativeMenu.AddSubmenu("File")
+	desktopMenu.AddText("Refresh Now", nil, func(*menu.CallbackData) {
 		windowController.Refresh(contextFn())
 	})
 	err = wails.Run(&options.App{
