@@ -251,11 +251,44 @@ See [LOGO.md](LOGO.md) for the logo's provenance, license, and preparation proce
 The Wails v2 desktop command owns the collector and a loopback-only dashboard
 server, then opens that server through a native WebView:
 
+### Prerequisites
+
+Install the Wails v2 CLI at the repository's pinned version:
+
+```sh
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.15.0
+```
+
+Linux builds require Go, a C compiler, `pkg-config`, GTK 3 development files,
+and WebKitGTK development files. Package names vary by distribution; on
+Debian/Ubuntu these are typically provided by packages such as `build-essential`,
+`pkg-config`, `libgtk-3-dev`, and `libwebkit2gtk-4.0-dev` (or the WebKitGTK
+version supplied by the distribution). Linux tray support also requires a
+desktop environment with a compatible system tray implementation.
+
+Windows builds require the Microsoft WebView2 Runtime on the target machine.
+Windows 11 normally includes it, but older or managed systems may need it
+installed separately. macOS builds require Xcode Command Line Tools. Wails
+does not bundle these operating-system WebView dependencies.
+
 ```sh
 cd cmd/gryphdash-desktop
 wails dev
 wails build
 ```
+
+The default `wails build` target is the host platform. Explicit targets can be
+selected from the desktop command directory, for example:
+
+```sh
+wails build -platform linux/amd64
+wails build -platform windows/amd64
+wails build -platform darwin/universal
+```
+
+Cross-compiling the application is not equivalent to validating a native Wails
+build: platform GUI libraries, WebView runtimes, tray behavior, and signing
+toolchains still need to be checked on their target operating systems.
 
 The direct Windows Go build must include Wails' `desktop` and `production`
 tags, plus the Windows GUI linker flag:
@@ -282,6 +315,18 @@ The desktop server uses `GRYPHDASH_DESKTOP_ADDR`, defaulting to
 `127.0.0.1:8081`. The Wails WebView proxies the same dashboard HTTP origin,
 including the existing JSON API and browser layout storage.
 
+Desktop data locations use the operating system's user configuration directory:
+
+| Platform | Settings and logs directory |
+| --- | --- |
+| Linux | `$XDG_CONFIG_HOME/gryphdash` or `~/.config/gryphdash` |
+| macOS | `~/Library/Application Support/gryphdash` |
+| Windows | `%AppData%\\gryphdash` |
+
+Settings are stored in `settings.json`. The `logs` directory is reserved for
+diagnostics and is created by **Open Logs**, but the application currently
+writes runtime messages to standard error rather than to log files.
+
 The desktop application enforces one running instance using the stable
 identifier `com.gryphdash.desktop`. Launching GryphDash again shows the existing
 window instead of opening a second desktop window.
@@ -301,3 +346,13 @@ only inside Wails; ordinary browser sessions do not request or store these
 desktop settings. Launch-at-login uses the platform's native startup mechanism,
 and notifications cover provider failures, recovery, and data that remains
 stale for several minutes.
+
+The tray provides Show Dashboard, Refresh Now, and Quit. The File menu provides
+Refresh Now, Preferences, Open Configuration, and Open Logs. Quit is available
+from the tray, while normal window closing hides the window when Close to tray
+is enabled.
+
+Installers, code signing, macOS notarization, and automatic updates are
+deliberately out of scope for the current development builds. The optional
+Windows build helper produces an unsigned binary/package for manual testing;
+it is not an installer or update channel.
