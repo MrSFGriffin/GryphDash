@@ -58,6 +58,18 @@ func (c *Controller) Hide(ctx context.Context) {
 	c.window.Hide(ctx)
 }
 
+func (c *Controller) CloseToTrayEnabled() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.closeToTray
+}
+
+func (c *Controller) SetCloseToTray(enabled bool) {
+	c.mu.Lock()
+	c.closeToTray = enabled
+	c.mu.Unlock()
+}
+
 func (c *Controller) Refresh(ctx context.Context) {
 	if c.actions.Refresh != nil {
 		c.actions.Refresh(ctx)

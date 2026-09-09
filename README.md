@@ -289,3 +289,11 @@ Refresh Now available without adding window-level Show or Quit controls. Quit
 is the explicit shutdown path and cleanly stops the tray, server, collector,
 and provider subprocesses. Native tray support is included in Wails builds
 using the `desktop` build tag; ordinary repository tests use a portable stub.
+
+The desktop app stores its settings in `settings.json` under the OS user
+configuration directory (for example, `~/.config/gryphdash/settings.json` on
+Linux). The dashboard exposes launch-at-login and native notification toggles
+only inside Wails; ordinary browser sessions do not request or store these
+desktop settings. Launch-at-login uses the platform's native startup mechanism,
+and notifications cover provider failures, recovery, and data that remains
+stale for several minutes.

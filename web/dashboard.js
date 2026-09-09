@@ -260,6 +260,46 @@
         $('connection-status').classList.add('stale');
       }).finally(() => { $('native-refresh').disabled = false; });
     });
+    if (typeof candidate.CloseToTrayEnabled === 'function' && typeof candidate.SetCloseToTray === 'function') {
+      const closeToTray = $('native-close-to-tray');
+      closeToTray.hidden = false;
+      const updateCloseToTrayLabel = enabled => { closeToTray.textContent = `Close to tray: ${enabled ? 'On' : 'Off'}`; };
+      candidate.CloseToTrayEnabled().then(updateCloseToTrayLabel).catch(() => { closeToTray.textContent = 'Close to tray: unavailable'; closeToTray.disabled = true; });
+      closeToTray.addEventListener('click', async () => {
+        closeToTray.disabled = true;
+        try { const enabled = !(await candidate.CloseToTrayEnabled()); await candidate.SetCloseToTray(enabled); updateCloseToTrayLabel(enabled); }
+        catch (error) { console.error('[GryphDash] close-to-tray update failed', error); }
+        finally { closeToTray.disabled = false; }
+      });
+    }
+    if (typeof candidate.LaunchAtLoginEnabled === 'function' && typeof candidate.SetLaunchAtLogin === 'function') {
+      const launch = $('native-launch-login');
+      launch.hidden = false;
+      const updateLaunchLabel = enabled => { launch.textContent = `Launch at login: ${enabled ? 'On' : 'Off'}`; };
+      candidate.LaunchAtLoginEnabled().then(updateLaunchLabel).catch(() => { launch.textContent = 'Launch at login: unavailable'; launch.disabled = true; });
+      launch.addEventListener('click', async () => {
+        launch.disabled = true;
+        try { const enabled = !(await candidate.LaunchAtLoginEnabled()); await candidate.SetLaunchAtLogin(enabled); updateLaunchLabel(enabled); }
+        catch (error) { console.error('[GryphDash] launch-at-login update failed', error); }
+        finally { launch.disabled = false; }
+      });
+    }
+    if (typeof candidate.NotificationsAvailable === 'function' && typeof candidate.NotificationsEnabled === 'function' && typeof candidate.SetNotificationsEnabled === 'function') {
+      candidate.NotificationsAvailable().then(available => {
+        if (!available) return;
+        const notifications = $('native-notifications');
+        notifications.hidden = false;
+        const updateNotificationLabel = enabled => { notifications.textContent = `Notifications: ${enabled ? 'On' : 'Off'}`; };
+        return candidate.NotificationsEnabled().then(updateNotificationLabel).then(() => {
+          notifications.addEventListener('click', async () => {
+            notifications.disabled = true;
+            try { const enabled = !(await candidate.NotificationsEnabled()); await candidate.SetNotificationsEnabled(enabled); updateNotificationLabel(enabled); }
+            catch (error) { console.error('[GryphDash] notification setting update failed', error); }
+            finally { notifications.disabled = false; }
+          });
+        });
+      }).catch(error => console.error('[GryphDash] notification availability check failed', error));
+    }
   }
   async function refresh() {
     if (refreshInFlight) {

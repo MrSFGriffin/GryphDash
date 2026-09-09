@@ -51,6 +51,22 @@ func TestControllerCanDisableCloseToTray(t *testing.T) {
 	}
 }
 
+func TestControllerCanChangeCloseToTray(t *testing.T) {
+	window := &fakeWindow{}
+	controller := NewController(window, true, Actions{})
+	controller.SetCloseToTray(false)
+	if controller.CloseToTrayEnabled() {
+		t.Fatal("expected close-to-tray to be disabled")
+	}
+	if controller.BeforeClose(context.Background()) {
+		t.Fatal("expected close to be allowed after disabling close-to-tray")
+	}
+	controller.SetCloseToTray(true)
+	if !controller.CloseToTrayEnabled() {
+		t.Fatal("expected close-to-tray to be enabled")
+	}
+}
+
 func TestControllerDispatchesActions(t *testing.T) {
 	window := &fakeWindow{}
 	var shown, refreshed, quit bool

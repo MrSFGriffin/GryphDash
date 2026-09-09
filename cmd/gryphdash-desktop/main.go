@@ -69,6 +69,26 @@ func main() {
 		log.Print(err)
 		os.Exit(1)
 	}
+	settingsPath, err := desktop.SettingsPath("gryphdash")
+	if err != nil {
+		log.Printf("desktop settings path: %v", err)
+	}
+	settings := desktop.DefaultSettings()
+	if settingsPath != "" {
+		if loaded, loadErr := desktop.LoadSettings(settingsPath); loadErr != nil {
+			log.Printf("desktop settings: %v", loadErr)
+		} else {
+			settings = loaded
+		}
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		executable = os.Args[0]
+	}
+	launchAtLogin, err := desktop.NewLaunchAtLogin(desktopApplicationID, executable)
+	if err != nil {
+		log.Printf("launch at login: %v", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -101,10 +121,11 @@ func main() {
 			}
 		}()
 	}
-	windowController := desktop.NewController(wailsWindow{}, true, desktop.Actions{
+	windowController := desktop.NewController(wailsWindow{}, settings.CloseToTray, desktop.Actions{
 		Refresh: func(context.Context) { refreshNow() },
 	})
-	desktopBridge := &DesktopBridge{controller: windowController, contextFn: contextFn}
+	desktopBridge := &DesktopBridge{controller: windowController, contextFn: contextFn, settingsPath: settingsPath, settings: settings, launchAtLogin: launchAtLogin}
+	notificationMonitor := desktop.NewNotificationMonitor(wailsNotifier{}, 30*time.Minute, 5*time.Minute, desktopBridge.NotificationsEnabled)
 	go runTray(gryphDashIcon, windowController, contextFn, func() {})
 	nativeMenu := menu.NewMenu()
 	desktopMenu := nativeMenu.AddSubmenu("File")
@@ -134,8 +155,14 @@ func main() {
 		OnStartup: func(ctx context.Context) {
 			wailsContext = ctx
 			close(wailsContextReady)
+			if err := wailsruntime.InitializeNotifications(ctx); err != nil {
+				log.Printf("desktop notifications: %v", err)
+			} else {
+				go notificationMonitor.Run(ctx, collectorInstance.Snapshot, 15*time.Second)
+			}
 		},
 		OnShutdown: func(shutdownContext context.Context) {
+			wailsruntime.CleanupNotifications(shutdownContext)
 			stopTray()
 			if err := serverRuntime.Shutdown(shutdownContext); err != nil {
 				log.Printf("desktop runtime shutdown: %v", err)
