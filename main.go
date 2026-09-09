@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"gryphdash/internal/logging"
 )
 
 func main() {
@@ -17,6 +19,12 @@ func main() {
 	if mode == "help" || mode == "-h" || mode == "--help" {
 		printUsage()
 		return
+	}
+	closeLogs, logErr := logging.Setup("gryphdash")
+	if logErr != nil {
+		log.Printf("logging setup failed: %v", logErr)
+	} else {
+		defer func() { _ = closeLogs() }()
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

@@ -323,9 +323,11 @@ Desktop data locations use the operating system's user configuration directory:
 | macOS | `~/Library/Application Support/gryphdash` |
 | Windows | `%AppData%\\gryphdash` |
 
-Settings are stored in `settings.json`. The `logs` directory is reserved for
-diagnostics and is created by **Open Logs**, but the application currently
-writes runtime messages to standard error rather than to log files.
+Settings are stored in `settings.json`. Runtime diagnostics are written to
+`logs/gryphdash.log` and mirrored to standard error. Logs rotate at 5 MiB and
+retain three backups. `GRYPHDASH_LOG_LEVEL` accepts `debug`, `info` (the
+default), `warn`, or `error`. Provider responses, credentials, and API keys are
+not written to the log.
 
 The desktop application enforces one running instance using the stable
 identifier `com.gryphdash.desktop`. Launching GryphDash again shows the existing

@@ -23,6 +23,7 @@ import (
 	"gryphdash/internal/collector"
 	"gryphdash/internal/config"
 	"gryphdash/internal/desktop"
+	"gryphdash/internal/logging"
 	webhandler "gryphdash/internal/web"
 	codexprovider "gryphdash/providers/codex"
 	openrouterprovider "gryphdash/providers/openrouter"
@@ -52,12 +53,17 @@ func (wailsWindow) Hide(ctx context.Context) { wailsruntime.Hide(ctx) }
 func (wailsWindow) Quit(ctx context.Context) { wailsruntime.Quit(ctx) }
 
 func main() {
+	closeLogs, logErr := logging.Setup("gryphdash")
+	if logErr != nil {
+		log.Printf("logging setup failed: %v", logErr)
+	} else {
+		defer func() { _ = closeLogs() }()
+	}
 	cfg, err := config.LoadDesktop()
 	if err != nil {
 		log.Print(err)
 		os.Exit(1)
 	}
-
 	collectorInstance := collector.New(collector.Options{
 		Providers: []collector.Reader{
 			codexprovider.NewAdapter(cfg.CodexExecutable),

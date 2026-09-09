@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -63,9 +64,29 @@ func (c *Collector) Fail() {
 }
 
 func (c *Collector) Refresh(parent context.Context) {
+	started := time.Now()
+	slog.Info("collector refresh started", "providers", len(c.providers))
 	responses := make(chan map[string]Result, len(c.providers))
 	for _, provider := range c.providers {
-		go func(p Reader) { responses <- p.Read(parent) }(provider)
+		go func(p Reader) {
+			providerStarted := time.Now()
+			results := map[string]Result{}
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					slog.Error("provider panicked", "provider", p.Name(), "duration", time.Since(providerStarted), "panic", recovered)
+				}
+				failures := 0
+				for source, result := range results {
+					if result.Error != "" {
+						failures++
+						slog.Warn("provider source failed", "provider", p.Name(), "source", source, "error", result.Error)
+					}
+				}
+				slog.Info("provider read completed", "provider", p.Name(), "duration", time.Since(providerStarted), "sources", len(results), "failures", failures)
+				responses <- results
+			}()
+			results = p.Read(parent)
+		}(provider)
 	}
 	for range c.providers {
 		c.applyResults(<-responses)
@@ -73,6 +94,7 @@ func (c *Collector) Refresh(parent context.Context) {
 	c.mu.Lock()
 	c.state.LastRefresh = time.Now().UTC()
 	c.mu.Unlock()
+	slog.Info("collector refresh completed", "duration", time.Since(started), "providers", len(c.providers))
 }
 
 func (c *Collector) applyResults(results map[string]Result) {
