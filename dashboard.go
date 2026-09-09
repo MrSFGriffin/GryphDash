@@ -11,6 +11,9 @@ type result = dashboardpkg.Result
 var configuredWidgetCatalog = dashboardpkg.Catalog()
 
 func buildDashboard(s snapshot) dashboard { return dashboardpkg.BuildDashboard(s) }
-func object(v any) map[string]any         { return dashboardpkg.Object(v) }
-func value(v any) string                  { return dashboardpkg.Value(v) }
-func status(r result) string              { return dashboardpkg.Status(r) }
+func buildDashboardWithCatalog(s snapshot, catalog widgetCatalog) dashboard {
+	return dashboardpkg.BuildDashboardWithCatalog(s, catalog)
+}
+func object(v any) map[string]any { return dashboardpkg.Object(v) }
+func value(v any) string          { return dashboardpkg.Value(v) }
+func status(r result) string      { return dashboardpkg.Status(r) }

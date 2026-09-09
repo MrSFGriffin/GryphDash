@@ -12,6 +12,10 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "-widgets" {
+		_ = json.NewEncoder(os.Stdout).Encode(providerprotocol.Response{Version: providerprotocol.Version, Provider: "currency", Widgets: currency.Catalog()})
+		return
+	}
 	var request providerprotocol.Request
 	if err := json.NewDecoder(os.Stdin).Decode(&request); err != nil {
 		fail(fmt.Errorf("invalid provider request: %w", err))

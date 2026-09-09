@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"gryphdash/internal/dashboard"
 	"gryphdash/internal/metrics"
 	"gryphdash/internal/providerprotocol"
 )
@@ -72,53 +73,9 @@ func Discover(directory string) ([]Provider, error) {
 func (p Provider) Name() string { return p.name }
 
 func (p Provider) Read(parent context.Context) map[string]metrics.Result {
-	ctx, cancel := context.WithTimeout(parent, p.timeout)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, p.executable, p.args...)
-	configureCommand(cmd)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	input, err := cmd.StdinPipe()
+	response, err := p.run(parent, "read")
 	if err != nil {
 		return p.failure(err)
-	}
-	output, err := cmd.StdoutPipe()
-	if err != nil {
-		return p.failure(err)
-	}
-	if err := cmd.Start(); err != nil {
-		return p.failure(err)
-	}
-
-	requestErr := json.NewEncoder(input).Encode(providerprotocol.Request{Version: providerprotocol.Version, Method: "read"})
-	_ = input.Close()
-	if requestErr != nil {
-		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
-		return p.failure(requestErr)
-	}
-
-	var response providerprotocol.Response
-	decodeErr := json.NewDecoder(bufio.NewReader(output)).Decode(&response)
-	waitErr := cmd.Wait()
-	if ctx.Err() != nil {
-		return p.failure(ctx.Err())
-	}
-	if decodeErr != nil {
-		return p.failure(fmt.Errorf("reading provider response: %w", decodeErr))
-	}
-	if waitErr != nil {
-		if detail := strings.TrimSpace(stderr.String()); detail != "" {
-			return p.failure(fmt.Errorf("provider exited: %w: %s", waitErr, detail))
-		}
-		return p.failure(fmt.Errorf("provider exited: %w", waitErr))
-	}
-	if response.Version != providerprotocol.Version {
-		return p.failure(fmt.Errorf("unsupported provider protocol version %d", response.Version))
-	}
-	if response.Provider != "" && response.Provider != p.name {
-		slog.Warn("provider identity mismatch", "expected", p.name, "reported", response.Provider)
 	}
 	if response.Error != "" {
 		return p.failure(fmt.Errorf("%s", response.Error))
@@ -127,6 +84,99 @@ func (p Provider) Read(parent context.Context) map[string]metrics.Result {
 		return p.failure(fmt.Errorf("provider returned no results"))
 	}
 	return response.Results
+}
+
+func (p Provider) Widgets(parent context.Context) (dashboard.WidgetCatalog, error) {
+	response, err := p.run(parent, "widgets")
+	if err != nil {
+		return dashboard.WidgetCatalog{}, err
+	}
+	if response.Error != "" {
+		return dashboard.WidgetCatalog{}, fmt.Errorf("%s", response.Error)
+	}
+	if len(response.Widgets.Widgets) == 0 {
+		return dashboard.WidgetCatalog{}, fmt.Errorf("provider returned no widgets")
+	}
+	if err := dashboard.ValidateCatalog(response.Widgets); err != nil {
+		return dashboard.WidgetCatalog{}, err
+	}
+	return response.Widgets, nil
+}
+
+func Catalog(parent context.Context, providers []Provider) dashboard.WidgetCatalog {
+	merged := dashboard.Catalog()
+	for _, provider := range providers {
+		catalog, err := provider.Widgets(parent)
+		if err != nil {
+			slog.Warn("provider widgets unavailable", "provider", provider.Name(), "error", err)
+			continue
+		}
+		merged, err = dashboard.MergeCatalog(merged, catalog)
+		if err != nil {
+			slog.Warn("provider widgets rejected", "provider", provider.Name(), "error", err)
+		}
+	}
+	return merged
+}
+
+func (p Provider) run(parent context.Context, method string) (providerprotocol.Response, error) {
+	ctx, cancel := context.WithTimeout(parent, p.timeout)
+	defer cancel()
+
+	args := append([]string(nil), p.args...)
+	if method == "widgets" {
+		args = append(args, "-widgets")
+	}
+	cmd := exec.CommandContext(ctx, p.executable, args...)
+	configureCommand(cmd)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	input, err := cmd.StdinPipe()
+	if err != nil {
+		return providerprotocol.Response{}, err
+	}
+	output, err := cmd.StdoutPipe()
+	if err != nil {
+		return providerprotocol.Response{}, err
+	}
+	if err := cmd.Start(); err != nil {
+		return providerprotocol.Response{}, err
+	}
+
+	if method == "widgets" {
+		_ = input.Close()
+	} else {
+		requestErr := json.NewEncoder(input).Encode(providerprotocol.Request{Version: providerprotocol.Version, Method: method})
+		_ = input.Close()
+		if requestErr != nil {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+			return providerprotocol.Response{}, requestErr
+		}
+	}
+
+	var response providerprotocol.Response
+	decodeErr := json.NewDecoder(bufio.NewReader(output)).Decode(&response)
+	waitErr := cmd.Wait()
+	if ctx.Err() != nil {
+		return providerprotocol.Response{}, ctx.Err()
+	}
+	if decodeErr != nil {
+		return providerprotocol.Response{}, fmt.Errorf("reading provider response: %w", decodeErr)
+	}
+	if waitErr != nil {
+		if detail := strings.TrimSpace(stderr.String()); detail != "" {
+			return providerprotocol.Response{}, fmt.Errorf("provider exited: %w: %s", waitErr, detail)
+		}
+		return providerprotocol.Response{}, fmt.Errorf("provider exited: %w", waitErr)
+	}
+	if response.Version != providerprotocol.Version {
+		return providerprotocol.Response{}, fmt.Errorf("unsupported provider protocol version %d", response.Version)
+	}
+	if response.Provider != "" && response.Provider != p.name {
+		slog.Warn("provider identity mismatch", "expected", p.name, "reported", response.Provider)
+	}
+	return response, nil
 }
 
 func (p Provider) failure(err error) map[string]metrics.Result {

@@ -21,14 +21,14 @@ type Snapshot = metrics.Snapshot
 type result = metrics.Result
 type snapshot = metrics.Snapshot
 
-type widgetLogic struct {
+type WidgetLogic struct {
 	Type   string `json:"type"`
 	Source string `json:"source,omitempty"`
 	Path   string `json:"path,omitempty"`
 	URL    string `json:"url,omitempty"`
 	Method string `json:"method,omitempty"`
 }
-type widgetConfig struct {
+type WidgetConfig struct {
 	ID          string      `json:"id"`
 	Group       string      `json:"group"`
 	Name        string      `json:"name"`
@@ -37,11 +37,14 @@ type widgetConfig struct {
 	Default     bool        `json:"default"`
 	Width       int         `json:"width"`
 	Height      int         `json:"height"`
-	Logic       widgetLogic `json:"logic"`
+	Logic       WidgetLogic `json:"logic"`
 }
-type widgetCatalog struct {
-	Widgets []widgetConfig `json:"widgets"`
+type WidgetCatalog struct {
+	Widgets []WidgetConfig `json:"widgets"`
 }
+type widgetLogic = WidgetLogic
+type widgetConfig = WidgetConfig
+type widgetCatalog = WidgetCatalog
 
 type day struct {
 	Date    string  `json:"date"`
@@ -84,25 +87,72 @@ func loadWidgetCatalog() widgetCatalog {
 	if err := json.Unmarshal(widgetConfigData, &catalog); err != nil {
 		panic(fmt.Sprintf("invalid widgets.json: %v", err))
 	}
-	for i, w := range catalog.Widgets {
-		if w.ID == "" || w.Group == "" || w.Name == "" || w.Description == "" || w.Logic.Type == "" || w.Width < 1 || w.Height < 2 {
-			panic(fmt.Sprintf("invalid widget definition at index %d", i))
-		}
+	if err := ValidateCatalog(catalog); err != nil {
+		panic(fmt.Sprintf("invalid widgets.json: %v", err))
 	}
 	return catalog
+}
+
+func ParseCatalog(data []byte) (WidgetCatalog, error) {
+	var catalog WidgetCatalog
+	if err := json.Unmarshal(data, &catalog); err != nil {
+		return WidgetCatalog{}, err
+	}
+	if err := ValidateCatalog(catalog); err != nil {
+		return WidgetCatalog{}, err
+	}
+	return catalog, nil
+}
+
+func ValidateCatalog(catalog WidgetCatalog) error {
+	seen := make(map[string]bool, len(catalog.Widgets))
+	for i, widget := range catalog.Widgets {
+		if widget.ID == "" || widget.Group == "" || widget.Name == "" || widget.Description == "" || widget.Logic.Type == "" || widget.Width < 1 || widget.Height < 2 {
+			return fmt.Errorf("invalid widget definition at index %d", i)
+		}
+		if seen[widget.ID] {
+			return fmt.Errorf("duplicate widget ID %q", widget.ID)
+		}
+		seen[widget.ID] = true
+	}
+	return nil
 }
 
 var configuredWidgetCatalog = loadWidgetCatalog()
 
 type Widget = widget
 type Dashboard = dashboard
-type WidgetCatalog = widgetCatalog
 
-func Catalog() WidgetCatalog              { return configuredWidgetCatalog }
-func BuildDashboard(s Snapshot) Dashboard { return buildDashboard(s) }
-func Object(v any) map[string]any         { return object(v) }
-func Value(v any) string                  { return value(v) }
-func Status(r Result) string              { return status(r) }
+func Catalog() WidgetCatalog { return configuredWidgetCatalog }
+func MergeCatalog(base WidgetCatalog, additions ...WidgetCatalog) (WidgetCatalog, error) {
+	merged := WidgetCatalog{Widgets: append([]WidgetConfig(nil), base.Widgets...)}
+	seen := make(map[string]bool, len(merged.Widgets))
+	for _, widget := range merged.Widgets {
+		seen[widget.ID] = true
+	}
+	for _, catalog := range additions {
+		for _, widget := range catalog.Widgets {
+			if widget.ID == "" || seen[widget.ID] {
+				return WidgetCatalog{}, fmt.Errorf("duplicate or empty widget ID %q", widget.ID)
+			}
+			if err := ValidateCatalog(WidgetCatalog{Widgets: []WidgetConfig{widget}}); err != nil {
+				return WidgetCatalog{}, err
+			}
+			seen[widget.ID] = true
+			merged.Widgets = append(merged.Widgets, widget)
+		}
+	}
+	return merged, nil
+}
+func BuildDashboard(s Snapshot) Dashboard {
+	return buildDashboardWithCatalog(s, configuredWidgetCatalog)
+}
+func BuildDashboardWithCatalog(s Snapshot, catalog WidgetCatalog) Dashboard {
+	return buildDashboardWithCatalog(s, catalog)
+}
+func Object(v any) map[string]any { return object(v) }
+func Value(v any) string          { return value(v) }
+func Status(r Result) string      { return status(r) }
 
 func object(v any) map[string]any { m, _ := v.(map[string]any); return m }
 func value(v any) string {
@@ -252,6 +302,9 @@ func bucketID(template, bucket string) string {
 	return strings.ReplaceAll(template, "{bucket}", url.PathEscape(bucket))
 }
 func buildDashboard(s snapshot) dashboard {
+	return buildDashboardWithCatalog(s, configuredWidgetCatalog)
+}
+func buildDashboardWithCatalog(s snapshot, catalog widgetCatalog) dashboard {
 	out := dashboard{Widgets: []widget{}}
 	lastRefresh := s.LastRefresh
 	for _, r := range s.Results {
@@ -263,7 +316,7 @@ func buildDashboard(s snapshot) dashboard {
 		out.LastRefresh = lastRefresh.UTC().Format(time.RFC3339)
 	}
 	var limits result
-	for _, c := range configuredWidgetCatalog.Widgets {
+	for _, c := range catalog.Widgets {
 		if c.Scope == "limitBuckets" {
 			limits = sourceResult(c.Logic, s)
 			break
@@ -275,7 +328,7 @@ func buildDashboard(s snapshot) dashboard {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	for _, c := range configuredWidgetCatalog.Widgets {
+	for _, c := range catalog.Widgets {
 		if c.Scope == "limitBuckets" {
 			for _, key := range keys {
 				b := object(buckets[key])

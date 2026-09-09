@@ -3,8 +3,8 @@
 A customizable widget dashboard for metrics from multiple providers. The Go server
 uses only the standard library and embeds all HTML, CSS, and JavaScript, including
 GridStack, in a single executable. Live metrics require the Codex CLI on the same
-machine. Widget definitions live in the embedded [`widgets.json`](internal/dashboard/widgets.json)
-catalog, so adding a metric does not require editing the dashboard renderer.
+machine. Built-in widget definitions live in the embedded [`widgets.json`](internal/dashboard/widgets.json)
+catalog, while external subprocess providers supply their own widget definitions at runtime.
 OpenRouter widgets use the optional `OPENROUTER_API_KEY` when it is configured.
 
 ## Run
@@ -65,7 +65,7 @@ initial selection is shown; all other metrics can be added from the picker.
 
 ## Widget catalog
 
-[`widgets.json`](internal/dashboard/widgets.json) is the source of truth for the widget picker. Each definition has a
+[`widgets.json`](internal/dashboard/widgets.json) is the source of truth for built-in widgets in the widget picker. Each definition has a
 stable `id`, `group`, display `name`, user-facing `description`, default layout
 size/visibility, and `logic`. Logic names are interpreted by the server: `scalar`
 reads a dotted field from an account, limits, or usage response; `limitWindow`
@@ -108,51 +108,31 @@ IDs stable so saved browser and TUI layouts continue to work.
 For a new external service, such as a stock-price, music, or calendar service:
 
 1. Create a package directory such as `providers/<name>/`.
-2. Add a client and adapter that read credentials from environment variables,
-   call the service, normalize its response, and return namespaced sources as
-   `map[string]metrics.Result`. Keep all HTTP, response parsing, source naming,
-   and provider-specific normalization in this package.
-3. Add `providers/<name>/client_test.go` using an `httptest` fixture. Cover
+2. Add a provider executable under `cmd/` that supports `-widgets` and the
+   line-delimited `read` protocol. The executable owns credentials, API calls,
+   response parsing, source naming, and widget definitions.
+3. Add provider tests using an `httptest` fixture. Cover
    successful responses, authentication failures, malformed responses, and any
    provider-specific limits. Tests must never call the live service.
-4. Register the adapter in the application wiring (`common.go` and the desktop
-   command), not in `internal/collector`. The collector only runs readers and
-   merges their already-namespaced sources. Use stable source names such as
-   `<name>/account`, `<name>/usage`, or `<name>/credits`.
-5. Add widget definitions to `widgets.json` using the complete source name:
+4. Build the executable as `gryphdash-provider-<name>` and put it beside
+   GryphDash or in the directory named by `GRYPHDASH_PROVIDER_DIR`.
+5. Document required environment variables and run the standard Go checks.
 
-```json
-{
-  "id": "example/item/metric",
-  "group": "Example provider",
-  "name": "Metric value",
-  "description": "A value returned by the provider",
-  "default": false,
-  "width": 4,
-  "height": 4,
-  "logic": { "type": "scalar", "source": "example/usage", "path": "value" }
-}
-```
-
-6. Add required environment variables to the Configuration table and explain
-   how to obtain them. Never put credentials in `widgets.json`, source code, or
-   browser storage.
-7. Run the standard Go checks. The web app and TUI discover the new widget from
-   the catalog; renderer changes are not needed.
-
-Provider API clients, adapters, normalization, and their tests belong under
-`providers/<name>/`. Application wiring is responsible only for constructing
-the adapter and passing it to the collector. Do not add provider-specific
-fields, imports, response parsing, or source switches to `internal/collector`.
+Provider API clients, normalization, widget definitions, and their tests belong
+under `providers/<name>/`. Application wiring only discovers generic provider
+executables and passes their results to the collector. Do not add
+provider-specific fields, imports, response parsing, or source switches to
+`internal/collector`.
 
 ### External subprocess providers
 
 External providers use a line-delimited JSON protocol on standard input and
-output. The host sends `{"version":1,"method":"read"}` and expects one
-response containing the provider name and namespaced results, each with `data`,
-`updated`, and optional `error` fields. The host starts one subprocess per
-refresh, applies a timeout, and keeps provider failures isolated from the other
-readers.
+output. The host runs the executable with `-widgets` at startup and expects one
+response containing the provider name and its complete widget catalog. It then
+sends `{"version":1,"method":"read"}` for each refresh and expects namespaced
+results, each with `data`, `updated`, and optional `error` fields. The host
+starts one subprocess per request, applies a timeout, and keeps provider
+failures isolated from the other readers.
 
 The first example provider reads Frankfurter exchange rates without an API key.
 Build it beside the main binary (the default discovery location):
@@ -162,7 +142,7 @@ go build -o bin/gryphdash-provider-currency ./cmd/gryphdash-provider-currency
 GRYPHDASH_PROVIDER_DIR="$PWD/bin" ./bin/gryphdash
 ```
 
-It publishes EUR/USD, EUR/GBP, and EUR/HUF widgets. Override the pairs with
+It publishes its EUR/USD, EUR/GBP, and EUR/HUF widgets. Override the pairs with
 `GRYPHDASH_CURRENCY_PAIRS=USD/EUR,EUR/JPY`, or point tests at a fixture with
 `GRYPHDASH_CURRENCY_URL`. Provider executables own their API calls, response
 parsing, source names, and credentials; the collector only understands the

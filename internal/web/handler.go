@@ -17,6 +17,10 @@ type SnapshotProvider interface {
 }
 
 func NewHandler(provider SnapshotProvider, assets fs.FS) http.Handler {
+	return NewHandlerWithCatalog(provider, assets, dashboard.Catalog())
+}
+
+func NewHandlerWithCatalog(provider SnapshotProvider, assets fs.FS, catalog dashboard.WidgetCatalog) http.Handler {
 	assetPaths := map[string]struct{ path, contentType string }{
 		"/":                         {"dashboard.html", "text/html; charset=utf-8"},
 		"/assets/dashboard.js":      {"dashboard.js", "text/javascript; charset=utf-8"},
@@ -43,7 +47,7 @@ func NewHandler(provider SnapshotProvider, assets fs.FS) http.Handler {
 			if r.Method == http.MethodHead {
 				return
 			}
-			if err := json.NewEncoder(w).Encode(dashboard.BuildDashboard(provider.Snapshot())); err != nil {
+			if err := json.NewEncoder(w).Encode(dashboard.BuildDashboardWithCatalog(provider.Snapshot(), catalog)); err != nil {
 				log.Printf("encode widgets: %v", err)
 			}
 			return

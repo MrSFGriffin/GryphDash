@@ -77,10 +77,11 @@ func main() {
 			providers = append(providers, provider)
 		}
 	}
+	widgetCatalog := subprocess.Catalog(context.Background(), externalProviders)
 	collectorInstance := collector.New(collector.Options{Providers: providers})
 	serverRuntime, err := app.NewDesktop(app.Options{
 		Collector: collectorInstance,
-		Handler:   webhandler.NewHandler(collectorInstance, webassets.FS),
+		Handler:   webhandler.NewHandlerWithCatalog(collectorInstance, webassets.FS, widgetCatalog),
 		Address:   cfg.DesktopAddress,
 		Interval:  cfg.RefreshInterval,
 	})

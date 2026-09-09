@@ -27,6 +27,7 @@ type tuiNamedLayout struct {
 }
 type tuiModel struct {
 	collector            *collector
+	catalog              widgetCatalog
 	dashboard, available dashboard
 	width, focus         int
 	selected             []string
@@ -48,10 +49,10 @@ func runTUI(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	c := newCollector(cfg)
+	c, catalog := newCollectorAndCatalog(cfg)
 	go c.Run(ctx, cfg.RefreshInterval)
 	selected, layouts, active := loadTUILayout()
-	m := tuiModel{collector: c, selected: selected, layouts: layouts, activeLayout: active}
+	m := tuiModel{collector: c, catalog: catalog, selected: selected, layouts: layouts, activeLayout: active}
 	_, err = tea.NewProgram(m, tea.WithContext(ctx), tea.WithAltScreen()).Run()
 	return err
 }
@@ -153,7 +154,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !snapshotReady(snapshot) {
 			return m, tuiTick()
 		}
-		m.available = buildDashboard(snapshot)
+		m.available = buildDashboardWithCatalog(snapshot, m.catalog)
 		m.ready = true
 		if m.selected == nil {
 			for _, w := range m.available.Widgets {
@@ -447,14 +448,14 @@ func (m *tuiModel) reorder(dx, dy int) {
 }
 func (m *tuiModel) defaults() {
 	m.selected = nil
-	for _, w := range buildDashboard(m.collector.Snapshot()).Widgets {
+	for _, w := range buildDashboardWithCatalog(m.collector.Snapshot(), m.catalog).Widgets {
 		if w.Default {
 			m.selected = append(m.selected, w.ID)
 		}
 	}
 	m.focus = 0
 	m.save()
-	m.available = buildDashboard(m.collector.Snapshot())
+	m.available = buildDashboardWithCatalog(m.collector.Snapshot(), m.catalog)
 	m.dashboard = m.apply(m.available)
 }
 func (m tuiModel) apply(d dashboard) dashboard {
