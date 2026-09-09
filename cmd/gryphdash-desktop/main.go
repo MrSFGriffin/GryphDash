@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
@@ -23,6 +24,8 @@ import (
 	"gryphdash/internal/config"
 	"gryphdash/internal/desktop"
 	webhandler "gryphdash/internal/web"
+	codexprovider "gryphdash/providers/codex"
+	openrouterprovider "gryphdash/providers/openrouter"
 	webassets "gryphdash/web"
 )
 
@@ -56,8 +59,10 @@ func main() {
 	}
 
 	collectorInstance := collector.New(collector.Options{
-		CodexExecutable: cfg.CodexExecutable,
-		OpenRouterKey:   cfg.OpenRouterKey,
+		Providers: []collector.Reader{
+			codexprovider.NewAdapter(cfg.CodexExecutable),
+			openrouterprovider.NewAdapter(cfg.OpenRouterKey, &http.Client{Timeout: 15 * time.Second}),
+		},
 	})
 	serverRuntime, err := app.NewDesktop(app.Options{
 		Collector: collectorInstance,

@@ -20,7 +20,7 @@ type immediateReader struct{ ready chan struct{} }
 func (immediateReader) Name() string { return "immediate" }
 func (r immediateReader) Read(context.Context) map[string]Result {
 	close(r.ready)
-	return map[string]Result{"account": {Data: map[string]any{"planType": "Plus"}, Updated: time.Now()}}
+	return map[string]Result{"codex/account": {Data: map[string]any{"planType": "Plus"}, Updated: time.Now()}}
 }
 
 func TestProviderResultsBecomeVisibleIndividually(t *testing.T) {
@@ -40,10 +40,10 @@ func TestProviderResultsBecomeVisibleIndividually(t *testing.T) {
 		t.Fatal("immediate provider did not finish")
 	}
 	deadline := time.Now().Add(time.Second)
-	for c.Snapshot().Account.Updated.IsZero() && time.Now().Before(deadline) {
+	for c.Snapshot().Results["codex/account"].Updated.IsZero() && time.Now().Before(deadline) {
 		time.Sleep(time.Millisecond)
 	}
-	if c.Snapshot().Account.Updated.IsZero() {
+	if c.Snapshot().Results["codex/account"].Updated.IsZero() {
 		t.Fatal("finished provider result was not published before the blocked provider")
 	}
 	cancel()
@@ -57,7 +57,7 @@ func TestProviderResultsBecomeVisibleIndividually(t *testing.T) {
 func TestSnapshotRemainsReadableDuringRefresh(t *testing.T) {
 	started := make(chan struct{})
 	c := New(Options{Providers: []Reader{blockingReader{started}}})
-	c.SetSnapshot(Snapshot{Account: Result{Updated: time.Now()}})
+	c.SetSnapshot(Snapshot{Results: map[string]Result{"codex/account": {Updated: time.Now()}}})
 
 	refreshDone := make(chan struct{})
 	refreshCtx, cancel := context.WithCancel(context.Background())

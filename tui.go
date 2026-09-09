@@ -154,15 +154,6 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tuiTick()
 		}
 		m.available = buildDashboard(snapshot)
-		if !hasLimitBuckets(snapshot) {
-			filtered := m.available.Widgets[:0]
-			for _, w := range m.available.Widgets {
-				if !strings.HasPrefix(w.ID, "codex/bucket/") {
-					filtered = append(filtered, w)
-				}
-			}
-			m.available.Widgets = filtered
-		}
 		m.ready = true
 		if m.selected == nil {
 			for _, w := range m.available.Widgets {
@@ -312,12 +303,8 @@ func (m *tuiModel) saveNamed(name string) {
 	m.save()
 }
 
-func hasLimitBuckets(s snapshot) bool {
-	return len(object(s.Limits.Data["rateLimitsByLimitId"])) > 0 || len(object(s.Limits.Data["rateLimits"])) > 0
-}
-
 func snapshotReady(s snapshot) bool {
-	for _, r := range []result{s.Account, s.Limits, s.Usage, s.OpenRouterKey, s.OpenRouterCredits} {
+	for _, r := range s.Results {
 		if !r.Updated.IsZero() || r.Error != "" {
 			return true
 		}

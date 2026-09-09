@@ -2,138 +2,91 @@ package collector
 
 import (
 	"context"
-	"net/http"
 	"sync"
 	"time"
 
-	codexprovider "gryphdash/providers/codex"
-	openrouterprovider "gryphdash/providers/openrouter"
+	"gryphdash/internal/metrics"
 )
 
-type Result = codexprovider.Result
+type Result = metrics.Result
+type Snapshot = metrics.Snapshot
 
-type Snapshot struct {
-	Account, Limits, Usage           Result
-	OpenRouterKey, OpenRouterCredits Result
-	LastRefresh                      time.Time
-}
-
+// Reader is the collector's provider-neutral boundary. A reader returns
+// already-namespaced source IDs, so the collector never interprets provider
+// result names or response shapes.
 type Reader interface {
 	Name() string
 	Read(context.Context) map[string]Result
 }
 
 type Options struct {
-	CodexExecutable string
-	OpenRouterKey   string
-	HTTPClient      *http.Client
-	Providers       []Reader
-}
-
-type codexReader struct{ executable string }
-
-func (p codexReader) Name() string { return "codex" }
-func (p codexReader) Read(ctx context.Context) map[string]Result {
-	d := (codexprovider.Client{Executable: p.executable}).Read(ctx)
-	return map[string]Result{"account": Result(d.Account), "limits": Result(d.Limits), "usage": Result(d.Usage)}
-}
-
-type openRouterReader struct {
-	key    string
-	client *http.Client
-}
-
-func (p openRouterReader) Name() string { return "openrouter" }
-func (p openRouterReader) Read(ctx context.Context) map[string]Result {
-	d := (openrouterprovider.Client{Key: p.key, HTTPClient: p.client}).Read(ctx)
-	return map[string]Result{"openrouterKey": Result(d.Key), "openrouterCredits": Result(d.Credits)}
+	Providers []Reader
 }
 
 type Collector struct {
-	mu                        sync.RWMutex
-	state                     Snapshot
-	executable, openRouterKey string
-	httpClient                *http.Client
-	providers                 []Reader
+	mu        sync.RWMutex
+	state     Snapshot
+	providers []Reader
 }
 
 func New(options Options) *Collector {
-	httpClient := options.HTTPClient
-	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 15 * time.Second}
-	}
-	return &Collector{
-		executable:    options.CodexExecutable,
-		openRouterKey: options.OpenRouterKey,
-		httpClient:    httpClient,
-		providers:     options.Providers,
-	}
+	return &Collector{providers: options.Providers, state: Snapshot{Results: map[string]Result{}}}
 }
 
 func (c *Collector) Snapshot() Snapshot {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.state
+	results := make(map[string]Result, len(c.state.Results))
+	for source, result := range c.state.Results {
+		results[source] = result
+	}
+	return Snapshot{Results: results, LastRefresh: c.state.LastRefresh}
 }
 
 func (c *Collector) SetSnapshot(snapshot Snapshot) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if snapshot.Results == nil {
+		snapshot.Results = map[string]Result{}
+	}
 	c.state = snapshot
 }
 
 func (c *Collector) Fail() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	message := "Could not connect to Codex. Check that the CLI is installed and run codex login as the server user."
-	for _, r := range []*Result{&c.state.Account, &c.state.Limits, &c.state.Usage, &c.state.OpenRouterKey, &c.state.OpenRouterCredits} {
-		r.Error = message
+	message := "Provider data is unavailable."
+	for source, result := range c.state.Results {
+		result.Error = message
+		c.state.Results[source] = result
 	}
 }
 
 func (c *Collector) Refresh(parent context.Context) {
-	providers := c.providers
-	if len(providers) == 0 {
-		providers = []Reader{codexReader{c.executable}, openRouterReader{c.openRouterKey, c.httpClient}}
+	responses := make(chan map[string]Result, len(c.providers))
+	for _, provider := range c.providers {
+		go func(p Reader) { responses <- p.Read(parent) }(provider)
 	}
-	type response struct{ results map[string]Result }
-	responses := make(chan response, len(providers))
-	for _, provider := range providers {
-		go func(p Reader) { responses <- response{p.Read(parent)} }(provider)
-	}
-	for range providers {
-		c.applyProviderResults((<-responses).results)
+	for range c.providers {
+		c.applyResults(<-responses)
 	}
 	c.mu.Lock()
 	c.state.LastRefresh = time.Now().UTC()
 	c.mu.Unlock()
 }
 
-func (c *Collector) applyProviderResults(providerResults map[string]Result) {
+func (c *Collector) applyResults(results map[string]Result) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	for name, src := range providerResults {
-		var dst *Result
-		switch name {
-		case "account":
-			dst = &c.state.Account
-		case "limits":
-			dst = &c.state.Limits
-		case "usage":
-			dst = &c.state.Usage
-		case "openrouterKey":
-			dst = &c.state.OpenRouterKey
-		case "openrouterCredits":
-			dst = &c.state.OpenRouterCredits
+	if c.state.Results == nil {
+		c.state.Results = map[string]Result{}
+	}
+	for source, result := range results {
+		if previous, ok := c.state.Results[source]; ok && result.Error != "" && !previous.Updated.IsZero() {
+			result.Data = previous.Data
+			result.Updated = previous.Updated
 		}
-		if dst == nil {
-			continue
-		}
-		if src.Error != "" {
-			dst.Error = src.Error
-		} else {
-			*dst = src
-		}
+		c.state.Results[source] = result
 	}
 }
 

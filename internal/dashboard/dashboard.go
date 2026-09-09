@@ -10,16 +10,16 @@ import (
 	"strings"
 	"time"
 
-	collectorpkg "gryphdash/internal/collector"
+	"gryphdash/internal/metrics"
 )
 
 //go:embed widgets.json
 var widgetConfigData []byte
 
-type Result = collectorpkg.Result
-type Snapshot = collectorpkg.Snapshot
-type result = collectorpkg.Result
-type snapshot = collectorpkg.Snapshot
+type Result = metrics.Result
+type Snapshot = metrics.Snapshot
+type result = metrics.Result
+type snapshot = metrics.Snapshot
 
 type widgetLogic struct {
 	Type   string `json:"type"`
@@ -162,19 +162,7 @@ func pathValue(root map[string]any, path string) any {
 	return current
 }
 func sourceResult(logic widgetLogic, s snapshot) result {
-	switch logic.Source {
-	case "account":
-		return s.Account
-	case "limits":
-		return s.Limits
-	case "usage":
-		return s.Usage
-	case "openrouterKey":
-		return s.OpenRouterKey
-	case "openrouterCredits":
-		return s.OpenRouterCredits
-	}
-	return result{}
+	return s.Results[logic.Source]
 }
 func configWidget(c widgetConfig, id, group string, raw any, r result) widget {
 	return widget{ID: id, Title: c.Name, Group: group, Source: c.Logic.Source, Kind: c.Logic.Type, Value: value(raw), Note: c.Description, Status: status(r), Default: c.Default, Width: c.Width, Height: c.Height}
@@ -266,7 +254,7 @@ func bucketID(template, bucket string) string {
 func buildDashboard(s snapshot) dashboard {
 	out := dashboard{Widgets: []widget{}}
 	lastRefresh := s.LastRefresh
-	for _, r := range []result{s.Account, s.Limits, s.Usage, s.OpenRouterKey, s.OpenRouterCredits} {
+	for _, r := range s.Results {
 		if r.Updated.After(lastRefresh) {
 			lastRefresh = r.Updated
 		}
@@ -274,10 +262,14 @@ func buildDashboard(s snapshot) dashboard {
 	if !lastRefresh.IsZero() {
 		out.LastRefresh = lastRefresh.UTC().Format(time.RFC3339)
 	}
-	buckets := object(s.Limits.Data["rateLimitsByLimitId"])
-	if len(buckets) == 0 {
-		buckets = map[string]any{"codex": s.Limits.Data["rateLimits"]}
+	var limits result
+	for _, c := range configuredWidgetCatalog.Widgets {
+		if c.Scope == "limitBuckets" {
+			limits = sourceResult(c.Logic, s)
+			break
+		}
 	}
+	buckets := object(limits.Data["buckets"])
 	keys := make([]string, 0, len(buckets))
 	for k := range buckets {
 		keys = append(keys, k)
@@ -293,9 +285,9 @@ func buildDashboard(s snapshot) dashboard {
 				id := bucketID(c.ID, key)
 				raw := pathValue(b, c.Logic.Path)
 				if c.Logic.Type == "limitWindow" {
-					out.Widgets = append(out.Widgets, limitWidget(copy, id, group, raw, s.Limits))
+					out.Widgets = append(out.Widgets, limitWidget(copy, id, group, raw, limits))
 				} else {
-					out.Widgets = append(out.Widgets, configWidget(copy, id, group, raw, s.Limits))
+					out.Widgets = append(out.Widgets, configWidget(copy, id, group, raw, limits))
 				}
 			}
 			continue

@@ -94,7 +94,7 @@ the web or TUI renderers. Each entry needs a stable `id`, `group`, `name`,
   "default": false,
   "width": 4,
   "height": 4,
-  "logic": { "type": "scalar", "source": "openrouterKey", "path": "usage_monthly" }
+  "logic": { "type": "scalar", "source": "openrouter/key", "path": "usage_monthly" }
 }
 ```
 
@@ -108,16 +108,18 @@ IDs stable so saved browser and TUI layouts continue to work.
 For a new external service, such as a stock-price, music, or calendar service:
 
 1. Create a package directory such as `providers/<name>/`.
-2. Add a client that reads credentials from environment variables, calls the
-   service, and returns JSON-like fields in named result sections. Keep all HTTP
-   and response parsing in this package.
+2. Add a client and adapter that read credentials from environment variables,
+   call the service, normalize its response, and return namespaced sources as
+   `map[string]metrics.Result`. Keep all HTTP, response parsing, source naming,
+   and provider-specific normalization in this package.
 3. Add `providers/<name>/client_test.go` using an `httptest` fixture. Cover
    successful responses, authentication failures, malformed responses, and any
    provider-specific limits. Tests must never call the live service.
-4. Add a provider reader in `collector.go` that adapts the client result to named
-   sections, then register it in the collector's provider list. A client section
-   named `metric` might be exposed as source `<name>` with path `metric`.
-5. Add widget definitions to `widgets.json`:
+4. Register the adapter in the application wiring (`common.go` and the desktop
+   command), not in `internal/collector`. The collector only runs readers and
+   merges their already-namespaced sources. Use stable source names such as
+   `<name>/account`, `<name>/usage`, or `<name>/credits`.
+5. Add widget definitions to `widgets.json` using the complete source name:
 
 ```json
 {
@@ -128,7 +130,7 @@ For a new external service, such as a stock-price, music, or calendar service:
   "default": false,
   "width": 4,
   "height": 4,
-  "logic": { "type": "scalar", "source": "example", "path": "value" }
+  "logic": { "type": "scalar", "source": "example/usage", "path": "value" }
 }
 ```
 
@@ -138,8 +140,10 @@ For a new external service, such as a stock-price, music, or calendar service:
 7. Run the standard Go checks. The web app and TUI discover the new widget from
    the catalog; renderer changes are not needed.
 
-Provider API clients and their tests belong under `providers/<name>/`; collector
-registration is the only application-level wiring currently required.
+Provider API clients, adapters, normalization, and their tests belong under
+`providers/<name>/`. Application wiring is responsible only for constructing
+the adapter and passing it to the collector. Do not add provider-specific
+fields, imports, response parsing, or source switches to `internal/collector`.
 
 ## Metrics
 

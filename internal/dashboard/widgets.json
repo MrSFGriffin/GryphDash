@@ -9,7 +9,7 @@
       "default": true,
       "width": 4,
       "height": 4,
-      "logic": { "type": "limitWindow", "path": "primary", "source": "limits" }
+      "logic": { "type": "limitWindow", "path": "primary", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/secondary",
@@ -20,7 +20,7 @@
       "default": true,
       "width": 4,
       "height": 4,
-      "logic": { "type": "limitWindow", "path": "secondary", "source": "limits" }
+      "logic": { "type": "limitWindow", "path": "secondary", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/credits/balance",
@@ -31,7 +31,7 @@
       "default": true,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "credits.balance", "source": "limits" }
+      "logic": { "type": "scalar", "path": "credits.balance", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/credits/hasCredits",
@@ -42,7 +42,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "credits.hasCredits", "source": "limits" }
+      "logic": { "type": "scalar", "path": "credits.hasCredits", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/credits/unlimited",
@@ -53,7 +53,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "credits.unlimited", "source": "limits" }
+      "logic": { "type": "scalar", "path": "credits.unlimited", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/planType",
@@ -64,7 +64,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "planType", "source": "limits" }
+      "logic": { "type": "scalar", "path": "planType", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/limitName",
@@ -75,7 +75,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "limitName", "source": "limits" }
+      "logic": { "type": "scalar", "path": "limitName", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/spendControlReached",
@@ -86,7 +86,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "spendControlReached", "source": "limits" }
+      "logic": { "type": "scalar", "path": "spendControlReached", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/rateLimitReachedType",
@@ -97,7 +97,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "rateLimitReachedType", "source": "limits" }
+      "logic": { "type": "scalar", "path": "rateLimitReachedType", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/individual/limit",
@@ -108,7 +108,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "individualLimit.limit", "source": "limits" }
+      "logic": { "type": "scalar", "path": "individualLimit.limit", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/individual/used",
@@ -119,7 +119,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "individualLimit.used", "source": "limits" }
+      "logic": { "type": "scalar", "path": "individualLimit.used", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/individual/remainingPercent",
@@ -130,7 +130,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "individualLimit.remainingPercent", "source": "limits" }
+      "logic": { "type": "scalar", "path": "individualLimit.remainingPercent", "source": "codex/limits" }
     },
     {
       "id": "codex/bucket/{bucket}/individual/resetsAt",
@@ -141,7 +141,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "timestamp", "path": "individualLimit.resetsAt", "source": "limits" }
+      "logic": { "type": "timestamp", "path": "individualLimit.resetsAt", "source": "codex/limits" }
     },
     {
       "id": "codex/resets/count",
@@ -151,7 +151,7 @@
       "default": true,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "rateLimitResetCredits.availableCount", "source": "limits" }
+      "logic": { "type": "scalar", "path": "rateLimitResetCredits.availableCount", "source": "codex/limits" }
     },
     {
       "id": "codex/resets/details",
@@ -161,7 +161,7 @@
       "default": false,
       "width": 8,
       "height": 6,
-      "logic": { "type": "resetDetails", "path": "rateLimitResetCredits", "source": "limits" }
+      "logic": { "type": "resetDetails", "path": "rateLimitResetCredits", "source": "codex/limits" }
     },
     {
       "id": "codex/usage/lifetimeTokens",
@@ -171,7 +171,7 @@
       "default": true,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "summary.lifetimeTokens", "source": "usage" }
+      "logic": { "type": "scalar", "path": "summary.lifetimeTokens", "source": "codex/usage" }
     },
     {
       "id": "codex/usage/peakDailyTokens",
@@ -181,7 +181,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "summary.peakDailyTokens", "source": "usage" }
+      "logic": { "type": "scalar", "path": "summary.peakDailyTokens", "source": "codex/usage" }
     },
     {
       "id": "codex/usage/longestRunningTurnSec",
@@ -191,7 +191,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "summary.longestRunningTurnSec", "source": "usage" }
+      "logic": { "type": "scalar", "path": "summary.longestRunningTurnSec", "source": "codex/usage" }
     },
     {
       "id": "codex/usage/currentStreakDays",
@@ -201,7 +201,7 @@
       "default": true,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "summary.currentStreakDays", "source": "usage" }
+      "logic": { "type": "scalar", "path": "summary.currentStreakDays", "source": "codex/usage" }
     },
     {
       "id": "codex/usage/longestStreakDays",
@@ -211,7 +211,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "summary.longestStreakDays", "source": "usage" }
+      "logic": { "type": "scalar", "path": "summary.longestStreakDays", "source": "codex/usage" }
     },
     {
       "id": "codex/usage/daily",
@@ -221,7 +221,7 @@
       "default": true,
       "width": 8,
       "height": 6,
-      "logic": { "type": "daily", "path": "dailyUsageBuckets", "source": "usage" }
+      "logic": { "type": "daily", "path": "dailyUsageBuckets", "source": "codex/usage" }
     },
     {
       "id": "codex/account/plan",
@@ -231,7 +231,7 @@
       "default": true,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "account.planType", "source": "account" }
+      "logic": { "type": "scalar", "path": "account.planType", "source": "codex/account" }
     },
     {
       "id": "codex/account/auth",
@@ -241,7 +241,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "path": "account.type", "source": "account" }
+      "logic": { "type": "scalar", "path": "account.type", "source": "codex/account" }
     },
     {
       "id": "openrouter/spend",
@@ -251,7 +251,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "source": "openrouterKey", "path": "usage_monthly", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouter/key", "path": "usage_monthly", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
     },
     {
       "id": "openrouter/budget",
@@ -261,7 +261,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "source": "openrouterKey", "path": "limit_remaining", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouter/key", "path": "limit_remaining", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
     },
     {
       "id": "openrouter/credits",
@@ -271,7 +271,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "source": "openrouterCredits", "path": "total_credits", "url": "https://openrouter.ai/api/v1/credits", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouter/credits", "path": "total_credits", "url": "https://openrouter.ai/api/v1/credits", "method": "GET" }
     },
     {
       "id": "openrouter/usage/daily",
@@ -281,7 +281,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "source": "openrouterKey", "path": "usage_daily", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouter/key", "path": "usage_daily", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
     },
     {
       "id": "openrouter/usage/weekly",
@@ -291,7 +291,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "source": "openrouterKey", "path": "usage_weekly", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouter/key", "path": "usage_weekly", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
     },
     {
       "id": "openrouter/limit",
@@ -301,7 +301,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "source": "openrouterKey", "path": "limit", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouter/key", "path": "limit", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
     },
     {
       "id": "openrouter/limit-reset",
@@ -311,7 +311,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "source": "openrouterKey", "path": "limit_reset", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouter/key", "path": "limit_reset", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
     },
     {
       "id": "openrouter/expires",
@@ -321,7 +321,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "timestamp", "source": "openrouterKey", "path": "expires_at", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
+      "logic": { "type": "timestamp", "source": "openrouter/key", "path": "expires_at", "url": "https://openrouter.ai/api/v1/key", "method": "GET" }
     },
     {
       "id": "openrouter/credits/used",
@@ -331,7 +331,7 @@
       "default": false,
       "width": 4,
       "height": 4,
-      "logic": { "type": "scalar", "source": "openrouterCredits", "path": "total_usage", "url": "https://openrouter.ai/api/v1/credits", "method": "GET" }
+      "logic": { "type": "scalar", "source": "openrouter/credits", "path": "total_usage", "url": "https://openrouter.ai/api/v1/credits", "method": "GET" }
     }
   ]
 }

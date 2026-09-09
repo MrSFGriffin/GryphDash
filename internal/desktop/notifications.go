@@ -40,7 +40,13 @@ func (m *NotificationMonitor) Observe(ctx context.Context, snapshot collector.Sn
 	if len(visible) == 0 {
 		return
 	}
-	failed := (snapshot.Account.Error != "" && visible["account"]) || (snapshot.Limits.Error != "" && visible["limits"]) || (snapshot.Usage.Error != "" && visible["usage"]) || (snapshot.OpenRouterKey.Error != "" && visible["openrouterKey"]) || (snapshot.OpenRouterCredits.Error != "" && visible["openrouterCredits"])
+	failed := false
+	for source, result := range snapshot.Results {
+		if visible[source] && result.Error != "" {
+			failed = true
+			break
+		}
+	}
 	stale := !snapshot.LastRefresh.IsZero() && m.staleAfter > 0 && now.Sub(snapshot.LastRefresh) >= m.staleAfter
 	issue := failed || stale
 	if issue && !m.lastFailure && stale && !failed && !preferences.Stale {

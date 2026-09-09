@@ -13,6 +13,7 @@ import (
 	"time"
 
 	collectorpkg "gryphdash/internal/collector"
+	codexprovider "gryphdash/providers/codex"
 )
 
 func fixture(t *testing.T, raw string) map[string]any {
@@ -25,10 +26,10 @@ func fixture(t *testing.T, raw string) map[string]any {
 }
 func TestDashboardMetrics(t *testing.T) {
 	now := time.Unix(1700000000, 0)
-	limits := fixture(t, `{"rateLimitsByLimitId":{"codex":{"primary":{"usedPercent":25,"windowDurationMins":300,"resetsAt":1700003600},"secondary":{"usedPercent":4,"windowDurationMins":10080},"credits":{"balance":"0","hasCredits":false,"unlimited":false}},"other":{"primary":{"usedPercent":10,"windowDurationMins":60}}},"rateLimitResetCredits":{"availableCount":2,"credits":[]}}`)
+	limits := fixture(t, `{"buckets":{"codex":{"primary":{"usedPercent":25,"windowDurationMins":300,"resetsAt":1700003600},"secondary":{"usedPercent":4,"windowDurationMins":10080},"credits":{"balance":"0","hasCredits":false,"unlimited":false}},"other":{"primary":{"usedPercent":10,"windowDurationMins":60}}},"rateLimitResetCredits":{"availableCount":2,"credits":[]}}`)
 	usage := fixture(t, `{"summary":{"lifetimeTokens":123,"currentStreakDays":0},"dailyUsageBuckets":[{"startDate":"2026-01-01","tokens":0},{"startDate":"2026-01-02","tokens":50}]}`)
 	c := collectorpkg.New(collectorpkg.Options{})
-	c.SetSnapshot(snapshot{Limits: result{Data: limits, Updated: now}, Usage: result{Data: usage, Updated: now}})
+	c.SetSnapshot(snapshot{Results: map[string]result{"codex/limits": {Data: limits, Updated: now}, "codex/usage": {Data: usage, Updated: now}}})
 	w := httptest.NewRecorder()
 	newHandler(c).ServeHTTP(w, httptest.NewRequest("GET", "/api/widgets", nil))
 	if w.Code != 200 {
@@ -96,7 +97,7 @@ func TestDashboardMetrics(t *testing.T) {
 }
 func TestWidgetIDsSurviveMissingData(t *testing.T) {
 	missing := buildDashboard(snapshot{})
-	live := buildDashboard(snapshot{Limits: result{Data: fixture(t, `{"rateLimits":{"primary":{"usedPercent":1,"windowDurationMins":300},"individualLimit":{"limit":"50","used":"1","remainingPercent":98,"resetsAt":1700000000}},"rateLimitResetCredits":{"availableCount":1,"credits":[{"id":"reset-a","title":"A reset","expiresAt":null}]}}`)}})
+	live := buildDashboard(snapshot{Results: map[string]result{"codex/limits": {Data: fixture(t, `{"buckets":{"codex":{"primary":{"usedPercent":1,"windowDurationMins":300},"individualLimit":{"limit":"50","used":"1","remainingPercent":98,"resetsAt":1700000000}}},"rateLimitResetCredits":{"availableCount":1,"credits":[{"id":"reset-a","title":"A reset","expiresAt":null}]}}`)}}})
 	ids := map[string]bool{}
 	for _, w := range live.Widgets {
 		ids[w.ID] = true
@@ -106,8 +107,13 @@ func TestWidgetIDsSurviveMissingData(t *testing.T) {
 			t.Errorf("widget disappeared when data arrived: %s", w.ID)
 		}
 	}
-	if len(ids) != len(missing.Widgets) {
-		t.Fatal("catalog shape changed with optional data")
+	if len(ids) <= len(missing.Widgets) {
+		t.Fatal("live bucket data did not add the expected dynamic widgets")
+	}
+	for _, w := range missing.Widgets {
+		if !strings.HasPrefix(w.ID, "codex/bucket/") && !ids[w.ID] {
+			t.Errorf("static widget disappeared when data arrived: %s", w.ID)
+		}
 	}
 	for _, w := range live.Widgets {
 		if w.ID == "codex/resets/details" && (len(w.Resets) != 1 || w.Resets[0].Expires != "No expiration") {
@@ -117,7 +123,7 @@ func TestWidgetIDsSurviveMissingData(t *testing.T) {
 }
 func TestNullZeroAndAssets(t *testing.T) {
 	c := collectorpkg.New(collectorpkg.Options{})
-	c.SetSnapshot(snapshot{Limits: result{Data: fixture(t, `{"rateLimits":{"credits":{"balance":"<script>alert(1)</script>","hasCredits":false}},"accountId":"private-account-id"}`)}})
+	c.SetSnapshot(snapshot{Results: map[string]result{"codex/limits": {Data: fixture(t, `{"buckets":{"codex":{"credits":{"balance":"<script>alert(1)</script>","hasCredits":false}}},"accountId":"private-account-id"}`)}}})
 	w := httptest.NewRecorder()
 	newHandler(c).ServeHTTP(w, httptest.NewRequest("GET", "/api/widgets", nil))
 	if strings.Contains(w.Body.String(), "<script>") || strings.Contains(w.Body.String(), "private-account-id") {
@@ -156,9 +162,9 @@ func TestNullZeroAndAssets(t *testing.T) {
 func TestFailureRetainsSnapshot(t *testing.T) {
 	now := time.Now()
 	c := collectorpkg.New(collectorpkg.Options{})
-	c.SetSnapshot(snapshot{Limits: result{Data: map[string]any{"marker": true}, Updated: now}})
+	c.SetSnapshot(snapshot{Results: map[string]result{"codex/limits": {Data: map[string]any{"marker": true}, Updated: now}}})
 	c.Fail()
-	got := c.Snapshot().Limits
+	got := c.Snapshot().Results["codex/limits"]
 	if got.Data["marker"] != true || !got.Updated.Equal(now) || !strings.Contains(status(got), "Stale") {
 		t.Fatal(got)
 	}
@@ -188,18 +194,20 @@ done
 	openrouterprovider.BaseURLOverride = openRouter.URL
 	defer func() { openrouterprovider.BaseURLOverride = previousBase }()
 	old := time.Now().Add(-time.Hour)
-	c := collectorpkg.New(collectorpkg.Options{CodexExecutable: path, OpenRouterKey: "test-key", HTTPClient: openRouter.Client()})
-	c.SetSnapshot(snapshot{Usage: result{Data: map[string]any{"old": true}, Updated: old}})
+	c := collectorpkg.New(collectorpkg.Options{Providers: []collectorpkg.Reader{codexprovider.NewAdapter(path), openrouterprovider.NewAdapter("test-key", openRouter.Client())}})
+	c.SetSnapshot(snapshot{Results: map[string]result{"codex/usage": {Data: map[string]any{"old": true}, Updated: old}}})
 	c.Refresh(context.Background())
 	s := c.Snapshot()
-	if s.Account.Error != "" || s.Limits.Error != "" || s.Limits.Updated.IsZero() {
+	if s.Results["codex/account"].Error != "" || s.Results["codex/limits"].Error != "" || s.Results["codex/limits"].Updated.IsZero() {
 		t.Fatalf("successful reads lost: %+v", s)
 	}
-	if s.Usage.Error == "" || s.Usage.Data["old"] != true || !s.Usage.Updated.Equal(old) {
-		t.Fatalf("stale activity lost: %+v", s.Usage)
+	usageResult := s.Results["codex/usage"]
+	if usageResult.Error == "" || usageResult.Data["old"] != true || !usageResult.Updated.Equal(old) {
+		t.Fatalf("stale activity lost: %+v", usageResult)
 	}
-	if s.OpenRouterKey.Error != "" || s.OpenRouterKey.Data["usage_monthly"] != float64(7) {
-		t.Fatalf("OpenRouter refresh was canceled by Codex cleanup: %+v", s.OpenRouterKey)
+	keyResult := s.Results["openrouter/key"]
+	if keyResult.Error != "" || keyResult.Data["usage_monthly"] != float64(7) {
+		t.Fatalf("OpenRouter refresh was canceled by Codex cleanup: %+v", keyResult)
 	}
 }
 func TestCollectorCancellation(t *testing.T) {
@@ -207,7 +215,7 @@ func TestCollectorCancellation(t *testing.T) {
 	if err := os.WriteFile(path, []byte("#!/bin/sh\nwhile IFS= read -r line; do :; done\n"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	c := collectorpkg.New(collectorpkg.Options{CodexExecutable: path})
+	c := collectorpkg.New(collectorpkg.Options{Providers: []collectorpkg.Reader{codexprovider.NewAdapter(path)}})
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	start := time.Now()
@@ -215,7 +223,7 @@ func TestCollectorCancellation(t *testing.T) {
 	if time.Since(start) > 3*time.Second {
 		t.Fatal("child process did not stop on cancellation")
 	}
-	if c.Snapshot().Limits.Error == "" {
+	if c.Snapshot().Results["codex/limits"].Error == "" {
 		t.Fatal("cancellation not reported")
 	}
 }
