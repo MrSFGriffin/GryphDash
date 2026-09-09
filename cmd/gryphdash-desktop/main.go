@@ -104,6 +104,7 @@ func main() {
 	windowController := desktop.NewController(wailsWindow{}, true, desktop.Actions{
 		Refresh: func(context.Context) { refreshNow() },
 	})
+	desktopBridge := &DesktopBridge{controller: windowController, contextFn: contextFn}
 	go runTray(gryphDashIcon, windowController, contextFn, func() {})
 	nativeMenu := menu.NewMenu()
 	desktopMenu := nativeMenu.AddSubmenu("File")
@@ -120,6 +121,7 @@ func main() {
 		AssetServer:       &assetserver.Options{Handler: proxy},
 		Linux:             &linux.Options{Icon: gryphDashIcon},
 		Menu:              nativeMenu,
+		Bind:              []interface{}{desktopBridge},
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId: desktopApplicationID,
 			OnSecondInstanceLaunch: func(options.SecondInstanceData) {
