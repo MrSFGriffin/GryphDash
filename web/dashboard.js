@@ -317,6 +317,7 @@
       return;
     }
     refreshInFlight = true;
+    let nextRefreshDelay = ready ? 15000 : 1000;
     try {
       const response = await fetch('/api/widgets', {cache: 'no-store', signal: AbortSignal.timeout(10000)});
       if (!response.ok) throw new Error('Dashboard request failed');
@@ -343,6 +344,7 @@
       $('connection-status').classList.remove('stale');
       $('last-refresh').textContent = data.lastRefresh ? formatRefreshTime(data.lastRefresh) : 'Last refresh: waiting for first refresh…';
       $('last-refresh').classList.remove('stale');
+      if (!data.lastRefresh) nextRefreshDelay = 1000;
       emptyState(); updateCountdowns();
     } catch (error) {
       $('connection-status').textContent = 'Dashboard connection lost. Displayed values may be stale; retrying automatically.';
@@ -353,7 +355,7 @@
         refreshRequested = false;
         setTimeout(refresh, 0);
       } else {
-        setTimeout(refresh, 15000);
+        setTimeout(refresh, nextRefreshDelay);
       }
     }
   }

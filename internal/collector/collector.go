@@ -101,38 +101,40 @@ func (c *Collector) Refresh(parent context.Context) {
 	for _, provider := range providers {
 		go func(p Reader) { responses <- response{p.Read(parent)} }(provider)
 	}
-	results := make([]map[string]Result, 0, len(providers))
 	for range providers {
-		results = append(results, (<-responses).results)
+		c.applyProviderResults((<-responses).results)
 	}
 	c.mu.Lock()
+	c.state.LastRefresh = time.Now().UTC()
+	c.mu.Unlock()
+}
+
+func (c *Collector) applyProviderResults(providerResults map[string]Result) {
+	c.mu.Lock()
 	defer c.mu.Unlock()
-	for _, providerResults := range results {
-		for name, src := range providerResults {
-			var dst *Result
-			switch name {
-			case "account":
-				dst = &c.state.Account
-			case "limits":
-				dst = &c.state.Limits
-			case "usage":
-				dst = &c.state.Usage
-			case "openrouterKey":
-				dst = &c.state.OpenRouterKey
-			case "openrouterCredits":
-				dst = &c.state.OpenRouterCredits
-			}
-			if dst == nil {
-				continue
-			}
-			if src.Error != "" {
-				dst.Error = src.Error
-			} else {
-				*dst = src
-			}
+	for name, src := range providerResults {
+		var dst *Result
+		switch name {
+		case "account":
+			dst = &c.state.Account
+		case "limits":
+			dst = &c.state.Limits
+		case "usage":
+			dst = &c.state.Usage
+		case "openrouterKey":
+			dst = &c.state.OpenRouterKey
+		case "openrouterCredits":
+			dst = &c.state.OpenRouterCredits
+		}
+		if dst == nil {
+			continue
+		}
+		if src.Error != "" {
+			dst.Error = src.Error
+		} else {
+			*dst = src
 		}
 	}
-	c.state.LastRefresh = time.Now().UTC()
 }
 
 func (c *Collector) Run(ctx context.Context, interval time.Duration) {
