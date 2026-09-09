@@ -31,6 +31,15 @@ func TestControllerClosesToTrayAndExplicitQuitCloses(t *testing.T) {
 	}
 }
 
+func TestControllerDispatchesHide(t *testing.T) {
+	window := &fakeWindow{}
+	controller := NewController(window, true, Actions{})
+	controller.Hide(context.Background())
+	if window.hidden != 1 {
+		t.Fatalf("expected window to hide: %+v", window)
+	}
+}
+
 func TestControllerCanDisableCloseToTray(t *testing.T) {
 	window := &fakeWindow{}
 	controller := NewController(window, false, Actions{})

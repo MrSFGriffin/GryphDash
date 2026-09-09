@@ -11,6 +11,7 @@
   let restoring = false;
   let refreshInFlight = false;
   let refreshRequested = false;
+  let nativeBridge;
   let grid;
   let pickerGroup = 'All';
   let activeLayoutName = 'Unsaved layout';
@@ -246,6 +247,20 @@
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? 'Last refresh: unavailable' : `Last refresh: ${date.toISOString().replace('T', ' ').slice(0, 19)} UTC`;
   }
+  function setupNativeBridge() {
+    const candidate = window.go?.main?.DesktopBridge;
+    if (!candidate || typeof candidate.RefreshNow !== 'function') return;
+    nativeBridge = candidate;
+    $('native-refresh').hidden = false;
+    $('native-refresh').addEventListener('click', () => {
+      $('native-refresh').disabled = true;
+      $('connection-status').textContent = 'Refreshing dashboard data…';
+      candidate.RefreshNow().catch(() => {
+        $('connection-status').textContent = 'Refresh request failed; retrying automatically.';
+        $('connection-status').classList.add('stale');
+      }).finally(() => { $('native-refresh').disabled = false; });
+    });
+  }
   async function refresh() {
     if (refreshInFlight) {
       refreshRequested = true;
@@ -294,6 +309,7 @@
   if (window.runtime && typeof window.runtime.EventsOn === 'function') {
     window.runtime.EventsOn('gryphdash:refresh-complete', refresh);
   }
+  setupNativeBridge();
   setInterval(updateCountdowns, 1000);
   refresh();
 })();

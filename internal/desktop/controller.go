@@ -54,6 +54,10 @@ func (c *Controller) Show(ctx context.Context) {
 	c.window.Show(ctx)
 }
 
+func (c *Controller) Hide(ctx context.Context) {
+	c.window.Hide(ctx)
+}
+
 func (c *Controller) Refresh(ctx context.Context) {
 	if c.actions.Refresh != nil {
 		c.actions.Refresh(ctx)

@@ -101,10 +101,14 @@ func (c *Collector) Refresh(parent context.Context) {
 	for _, provider := range providers {
 		go func(p Reader) { responses <- response{p.Read(parent)} }(provider)
 	}
+	results := make([]map[string]Result, 0, len(providers))
+	for range providers {
+		results = append(results, (<-responses).results)
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	for range providers {
-		for name, src := range (<-responses).results {
+	for _, providerResults := range results {
+		for name, src := range providerResults {
 			var dst *Result
 			switch name {
 			case "account":
