@@ -306,6 +306,8 @@
         console.error('[GryphDash] preferences save failed', error);
       }
     }
+    $('open-configuration').addEventListener('click', () => candidate.OpenConfiguration().catch(error => { preferenceStatus.textContent = 'Could not open the configuration folder.'; console.error('[GryphDash] open configuration failed', error); }));
+    $('open-logs').addEventListener('click', () => candidate.OpenLogs().catch(error => { preferenceStatus.textContent = 'Could not open the logs folder.'; console.error('[GryphDash] open logs failed', error); }));
     $('close-preferences').addEventListener('click', () => preferences.close());
     preferences.addEventListener('click', event => { if (event.target === preferences) preferences.close(); });
     for (const field of Object.values(fields)) field.addEventListener('change', savePreferences);

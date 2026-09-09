@@ -140,6 +140,16 @@ func main() {
 	desktopMenu.AddText("Preferences…", nil, func(*menu.CallbackData) {
 		wailsruntime.EventsEmit(contextFn(), "gryphdash:open-preferences")
 	})
+	desktopMenu.AddText("Open Configuration", nil, func(*menu.CallbackData) {
+		if err := desktopBridge.OpenConfiguration(); err != nil {
+			log.Printf("open configuration: %v", err)
+		}
+	})
+	desktopMenu.AddText("Open Logs", nil, func(*menu.CallbackData) {
+		if err := desktopBridge.OpenLogs(); err != nil {
+			log.Printf("open logs: %v", err)
+		}
+	})
 	err = wails.Run(&options.App{
 		Title:             "GryphDash",
 		Width:             1200,
@@ -163,6 +173,7 @@ func main() {
 		OnStartup: func(ctx context.Context) {
 			wailsContext = ctx
 			close(wailsContextReady)
+			wailsruntime.WindowSetSystemDefaultTheme(ctx)
 			if err := wailsruntime.InitializeNotifications(ctx); err != nil {
 				log.Printf("desktop notifications: %v", err)
 			} else {

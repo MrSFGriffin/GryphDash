@@ -1,6 +1,9 @@
 package desktop
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 func TestSettingsRoundTrip(t *testing.T) {
 	path := t.TempDir() + "/settings.json"
@@ -24,5 +27,16 @@ func TestMissingSettingsUseDefaults(t *testing.T) {
 	}
 	if got != DefaultSettings() {
 		t.Fatalf("got %+v, want defaults", got)
+	}
+}
+
+func TestConfigurationAndLogsDirectories(t *testing.T) {
+	config, err := ConfigurationDir("gryphdash")
+	if err != nil || filepath.Base(config) != "gryphdash" {
+		t.Fatalf("configuration directory = %q, %v", config, err)
+	}
+	logs, err := LogsDir("gryphdash")
+	if err != nil || filepath.Base(logs) != "logs" || filepath.Dir(logs) != config {
+		t.Fatalf("logs directory = %q, %v", logs, err)
 	}
 }

@@ -32,11 +32,27 @@ func (s Settings) NotificationPreferences() NotificationPreferences {
 }
 
 func SettingsPath(appName string) (string, error) {
+	dir, err := ConfigurationDir(appName)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "settings.json"), nil
+}
+
+func ConfigurationDir(appName string) (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, appName, "settings.json"), nil
+	return filepath.Join(dir, appName), nil
+}
+
+func LogsDir(appName string) (string, error) {
+	dir, err := ConfigurationDir(appName)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "logs"), nil
 }
 
 func LoadSettings(path string) (Settings, error) {

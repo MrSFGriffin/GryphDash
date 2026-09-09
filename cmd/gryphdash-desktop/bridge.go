@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"sync"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -102,6 +104,24 @@ func (b *DesktopBridge) SetNotificationScope(sources []string) {
 	b.scopeMu.Lock()
 	b.scope = scope
 	b.scopeMu.Unlock()
+}
+
+func (b *DesktopBridge) OpenConfiguration() error {
+	if b.settingsPath == "" {
+		return errors.New("desktop configuration is unavailable")
+	}
+	return desktop.OpenDirectory(filepath.Dir(b.settingsPath))
+}
+
+func (b *DesktopBridge) OpenLogs() error {
+	logs, err := desktop.LogsDir("gryphdash")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(logs, 0700); err != nil {
+		return err
+	}
+	return desktop.OpenDirectory(logs)
 }
 
 func (b *DesktopBridge) NotificationScope() map[string]bool {

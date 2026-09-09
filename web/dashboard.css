@@ -71,4 +71,5 @@ fieldset { border: 1px solid #303b4b; border-radius: 12px; margin: 0 0 18px; pad
 legend { color: #a6e4cc; padding: 0 8px; }
 .preference-row { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: #dce7f5; }
 .preference-row input { width: auto; accent-color: #a6e4cc; }
+.preference-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 @media (max-width: 700px) { main { padding: 26px 12px; } .page-header { padding: 0 8px; } .toolbar { gap: 8px; } button { font-size: .85rem; } h1 { font-size: 2.1rem; } .value { font-size: 2rem; } }
