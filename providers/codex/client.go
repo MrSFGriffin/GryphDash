@@ -71,6 +71,7 @@ func (c Client) Read(parent context.Context) Data {
 	ctx, cancel := context.WithTimeout(parent, 45*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, c.Executable, "app-server")
+	configureCommand(cmd)
 	input, err := cmd.StdinPipe()
 	if err != nil {
 		out.fail(err)
