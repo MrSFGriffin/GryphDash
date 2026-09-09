@@ -130,6 +130,21 @@
     status.classList.toggle('stale', !w.status.startsWith('Updated '));
     container.querySelector('.remove-widget').setAttribute('aria-label', `Remove ${w.title}`);
     container.setAttribute('aria-label', `${w.group}: ${w.title}`);
+    resizeWidgetToContent(container);
+    requestAnimationFrame(() => resizeWidgetToContent(container));
+  }
+  function resizeWidgetToContent(container) {
+    if (!grid) return;
+    const item = container.closest('.grid-stack-item');
+    const node = item?.gridstackNode;
+    if (!item || !node) return;
+    const body = container.querySelector('.widget-body');
+    const status = container.querySelector('.widget-status');
+    const header = container.querySelector('.widget-header');
+    const cellHeight = grid.getCellHeight?.(true) || 72;
+    const needed = Math.max(container.scrollHeight, header.offsetHeight + body.scrollHeight + status.offsetHeight + 48);
+    const height = Math.max(2, Math.min(100, Math.ceil(needed / cellHeight)));
+    if (node.h !== height) grid.update(item, {h: height, maxH: 100});
   }
   function keyboardLayout(event, container) {
     if (!editing || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
@@ -175,7 +190,7 @@
   function addWidget(id, placement = {}) {
     if (activeIDs().has(id)) return;
     const w = catalog.get(id) || missingWidget(id);
-    grid.addWidget({id, w: w.width, h: w.height, minH: 2, maxH: 30, ...placement});
+    grid.addWidget({id, w: w.width, h: w.height, minH: 2, maxH: 100, ...placement});
     grid.enableMove(editing); grid.enableResize(editing);
   }
   function loadDefaults() {
@@ -330,7 +345,7 @@
       if (!ready) {
         restoring = true;
         if (savedLayout !== null) {
-          grid.load(savedLayout.map(item => ({...item, minH: 2, maxH: 30})));
+          grid.load(savedLayout.map(item => ({...item, minH: 2, maxH: 100})));
         } else loadDefaults();
         ready = true; restoring = false;
         // Establish the 12-column layout before adapting to mobile, so reloads

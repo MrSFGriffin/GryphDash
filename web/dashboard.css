@@ -31,10 +31,10 @@ button.primary:hover:not(:disabled) { background: #d0f8e9; }
 .editing .remove-widget { display: block; }
 .editing .widget-heading { cursor: move; }
 .editing .grid-stack-item-content { border-color: #668fa3; }
-.widget-body { overflow: auto; flex: 1; min-height: 0; margin-top: 16px; }
+.widget-body { overflow: visible; flex: 1 1 auto; min-height: auto; margin-top: 16px; }
 .value { font-size: clamp(1.6rem, 2.8vw, 2.6rem); font-weight: 650; letter-spacing: -.04em; overflow-wrap: anywhere; margin: 0 0 8px; }
 .note, .countdown { color: #a7b3c6; font-size: .8rem; line-height: 1.5; margin-bottom: 6px; }
-.widget-status { color: #91a7bf; font-size: .68rem; line-height: 1.45; margin: 12px 0 0; max-height: 3em; overflow: auto; flex-shrink: 0; }
+.widget-status { color: #91a7bf; font-size: .68rem; line-height: 1.45; margin: 12px 0 0; overflow: visible; flex-shrink: 0; }
 .stale { color: #f4cb87; }
 progress { display: block; height: 7px; width: 100%; accent-color: #a6e4cc; margin: 12px 0; border: 0; border-radius: 10px; overflow: hidden; }
 progress::-webkit-progress-bar { background: #303b4b; }
