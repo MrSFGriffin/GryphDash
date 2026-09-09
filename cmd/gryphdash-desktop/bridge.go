@@ -18,6 +18,8 @@ type DesktopBridge struct {
 	settingsMu    sync.RWMutex
 	settings      desktop.Settings
 	launchAtLogin desktop.LaunchAtLogin
+	scopeMu       sync.RWMutex
+	scope         map[string]bool
 }
 
 func (b *DesktopBridge) RefreshNow() { b.controller.Refresh(b.contextFn()) }
@@ -90,6 +92,26 @@ func (b *DesktopBridge) SetNotificationPreferences(preferences desktop.Notificat
 	settings := b.settings
 	b.settingsMu.Unlock()
 	return b.saveSettings(settings)
+}
+
+func (b *DesktopBridge) SetNotificationScope(sources []string) {
+	scope := make(map[string]bool, len(sources))
+	for _, source := range sources {
+		scope[source] = true
+	}
+	b.scopeMu.Lock()
+	b.scope = scope
+	b.scopeMu.Unlock()
+}
+
+func (b *DesktopBridge) NotificationScope() map[string]bool {
+	b.scopeMu.RLock()
+	defer b.scopeMu.RUnlock()
+	scope := make(map[string]bool, len(b.scope))
+	for source := range b.scope {
+		scope[source] = true
+	}
+	return scope
 }
 
 func (b *DesktopBridge) saveSettings(settings desktop.Settings) error {

@@ -17,7 +17,7 @@ func (n *recordingNotifier) Notify(context.Context, string, string) error {
 
 func TestNotificationMonitorTransitionsAndRateLimits(t *testing.T) {
 	n := &recordingNotifier{}
-	m := NewNotificationMonitor(n, time.Minute, 5*time.Minute, nil)
+	m := NewNotificationMonitor(n, time.Minute, 5*time.Minute, nil, func() map[string]bool { return map[string]bool{"usage": true} })
 	now := time.Unix(100, 0)
 	failure := collector.Snapshot{Usage: collector.Result{Error: "failed"}}
 	m.Observe(context.Background(), failure, now)
@@ -31,7 +31,7 @@ func TestNotificationMonitorTransitionsAndRateLimits(t *testing.T) {
 
 func TestNotificationMonitorReportsStaleData(t *testing.T) {
 	n := &recordingNotifier{}
-	m := NewNotificationMonitor(n, time.Hour, 5*time.Minute, nil)
+	m := NewNotificationMonitor(n, time.Hour, 5*time.Minute, nil, func() map[string]bool { return map[string]bool{"usage": true} })
 	now := time.Unix(1000, 0)
 	m.Observe(context.Background(), collector.Snapshot{LastRefresh: now.Add(-6 * time.Minute)}, now)
 	if len(n.titles) != 1 {
@@ -40,5 +40,14 @@ func TestNotificationMonitorReportsStaleData(t *testing.T) {
 	m.Observe(context.Background(), collector.Snapshot{LastRefresh: now}, now.Add(time.Second))
 	if len(n.titles) != 2 {
 		t.Fatalf("got %d notifications, want stale recovery notification", len(n.titles))
+	}
+}
+
+func TestNotificationMonitorIgnoresFailuresOutsideBoardScope(t *testing.T) {
+	n := &recordingNotifier{}
+	m := NewNotificationMonitor(n, time.Minute, 5*time.Minute, nil, func() map[string]bool { return map[string]bool{"usage": true} })
+	m.Observe(context.Background(), collector.Snapshot{Account: collector.Result{Error: "failed"}}, time.Unix(100, 0))
+	if len(n.titles) != 0 {
+		t.Fatal("unexpected notification for a provider without a displayed widget")
 	}
 }

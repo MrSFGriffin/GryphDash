@@ -18,10 +18,11 @@ type NotificationMonitor struct {
 	minInterval      time.Duration
 	staleAfter       time.Duration
 	preferences      func() NotificationPreferences
+	scope            func() map[string]bool
 }
 
-func NewNotificationMonitor(notifier Notifier, minInterval, staleAfter time.Duration, preferences func() NotificationPreferences) *NotificationMonitor {
-	return &NotificationMonitor{notifier: notifier, minInterval: minInterval, staleAfter: staleAfter, preferences: preferences}
+func NewNotificationMonitor(notifier Notifier, minInterval, staleAfter time.Duration, preferences func() NotificationPreferences, scope func() map[string]bool) *NotificationMonitor {
+	return &NotificationMonitor{notifier: notifier, minInterval: minInterval, staleAfter: staleAfter, preferences: preferences, scope: scope}
 }
 
 func (m *NotificationMonitor) Observe(ctx context.Context, snapshot collector.Snapshot, now time.Time) {
@@ -32,7 +33,14 @@ func (m *NotificationMonitor) Observe(ctx context.Context, snapshot collector.Sn
 	if !preferences.Enabled {
 		return
 	}
-	failed := snapshot.Account.Error != "" || snapshot.Limits.Error != "" || snapshot.Usage.Error != "" || snapshot.OpenRouterKey.Error != "" || snapshot.OpenRouterCredits.Error != ""
+	visible := map[string]bool{}
+	if m.scope != nil {
+		visible = m.scope()
+	}
+	if len(visible) == 0 {
+		return
+	}
+	failed := (snapshot.Account.Error != "" && visible["account"]) || (snapshot.Limits.Error != "" && visible["limits"]) || (snapshot.Usage.Error != "" && visible["usage"]) || (snapshot.OpenRouterKey.Error != "" && visible["openrouterKey"]) || (snapshot.OpenRouterCredits.Error != "" && visible["openrouterCredits"])
 	stale := !snapshot.LastRefresh.IsZero() && m.staleAfter > 0 && now.Sub(snapshot.LastRefresh) >= m.staleAfter
 	issue := failed || stale
 	if issue && !m.lastFailure && stale && !failed && !preferences.Stale {

@@ -61,6 +61,7 @@ type widget struct {
 	ID       string        `json:"id"`
 	Title    string        `json:"title"`
 	Group    string        `json:"group"`
+	Source   string        `json:"source,omitempty"`
 	Kind     string        `json:"kind"`
 	Value    string        `json:"value"`
 	Note     string        `json:"note"`
@@ -176,7 +177,7 @@ func sourceResult(logic widgetLogic, s snapshot) result {
 	return result{}
 }
 func configWidget(c widgetConfig, id, group string, raw any, r result) widget {
-	return widget{ID: id, Title: c.Name, Group: group, Kind: c.Logic.Type, Value: value(raw), Note: c.Description, Status: status(r), Default: c.Default, Width: c.Width, Height: c.Height}
+	return widget{ID: id, Title: c.Name, Group: group, Source: c.Logic.Source, Kind: c.Logic.Type, Value: value(raw), Note: c.Description, Status: status(r), Default: c.Default, Width: c.Width, Height: c.Height}
 }
 func limitWidget(c widgetConfig, id, group string, raw any, r result) widget {
 	w := configWidget(c, id, group, nil, r)

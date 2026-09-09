@@ -56,13 +56,22 @@
     try {
       // Ask for the desktop layout even when the grid is currently one column.
       const items = grid.save(false, false, undefined, 12).map(({id, x, y, w, h}) => ({id, x: x ?? 0, y: y ?? 0, w: w ?? 4, h: h ?? 4}));
-      layoutStore.current = items; writeLayoutStore();
+      layoutStore.current = items; writeLayoutStore(); updateNotificationScope();
       $('layout-status').textContent = 'Layout saved in this browser';
     } catch (error) {
       $('layout-status').textContent = 'Browser storage unavailable; layout changes last for this visit.';
     }
   }
   function activeIDs() { return new Set(grid.getGridItems().map(el => el.gridstackNode.id)); }
+  function updateNotificationScope() {
+    if (!nativeBridge || typeof nativeBridge.SetNotificationScope !== 'function') return;
+    const sources = new Set();
+    for (const el of grid.getGridItems()) {
+      const widget = catalog.get(el.gridstackNode.id);
+      if (widget?.source) sources.add(widget.source);
+    }
+    nativeBridge.SetNotificationScope([...sources]);
+  }
   function emptyState() { $('empty-state').hidden = !ready || grid.getGridItems().length !== 0; }
   function missingWidget(id) {
     const group = id.startsWith('openrouter/') ? 'OpenRouter' : 'Codex';
@@ -329,6 +338,7 @@
         if (savedLayout === null && $('layout-status').textContent === 'Layout saved in this browser') saveLayout();
       }
       for (const el of grid.getGridItems()) renderBody(el.querySelector('.grid-stack-item-content'), catalog.get(el.gridstackNode.id) || missingWidget(el.gridstackNode.id));
+      updateNotificationScope();
       $('connection-status').textContent = 'Connected · widget values refresh automatically';
       $('connection-status').classList.remove('stale');
       $('last-refresh').textContent = data.lastRefresh ? formatRefreshTime(data.lastRefresh) : 'Last refresh: waiting for first refresh…';
