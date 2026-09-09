@@ -156,6 +156,10 @@ func main() {
 			log.Printf("open logs: %v", err)
 		}
 	})
+	desktopMenu.AddSeparator()
+	desktopMenu.AddText("Quit", nil, func(*menu.CallbackData) {
+		windowController.Quit(contextFn())
+	})
 	err = wails.Run(&options.App{
 		Title:             "GryphDash",
 		Width:             1200,
