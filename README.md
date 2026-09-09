@@ -278,6 +278,10 @@ The desktop server uses `GRYPHDASH_DESKTOP_ADDR`, defaulting to
 `127.0.0.1:8081`. The Wails WebView proxies the same dashboard HTTP origin,
 including the existing JSON API and browser layout storage.
 
+The desktop application enforces one running instance using the stable
+identifier `com.gryphdash.desktop`. Launching GryphDash again shows the existing
+window instead of opening a second desktop window.
+
 Closing the desktop window hides it to the system tray while the collector and
 dashboard server continue running. Use the tray icon to show the dashboard,
 refresh data immediately, or quit GryphDash. The native application menu keeps

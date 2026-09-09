@@ -28,6 +28,7 @@ import (
 
 const desktopStartupTimeout = 5 * time.Second
 const desktopRefreshCompleteEvent = "gryphdash:refresh-complete"
+const desktopApplicationID = "com.gryphdash.desktop"
 
 // gryphDashIcon is used by Wails for the native Linux window icon. The same
 // source image is also used by the Wails packager for macOS and Windows icons.
@@ -119,6 +120,12 @@ func main() {
 		AssetServer:       &assetserver.Options{Handler: proxy},
 		Linux:             &linux.Options{Icon: gryphDashIcon},
 		Menu:              nativeMenu,
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId: desktopApplicationID,
+			OnSecondInstanceLaunch: func(options.SecondInstanceData) {
+				windowController.Show(contextFn())
+			},
+		},
 		OnBeforeClose: func(ctx context.Context) bool {
 			return windowController.BeforeClose(ctx)
 		},
