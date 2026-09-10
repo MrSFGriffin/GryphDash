@@ -145,7 +145,7 @@ go build -o bin/gryphdash-provider-currency ./cmd/gryphdash-provider-currency
 GRYPHDASH_PROVIDER_DIR="$PWD/bin" ./bin/gryphdash
 ```
 
-It publishes its EUR/USD, EUR/GBP, and EUR/HUF widgets. Override the pairs with
+It publishes its EUR/USD, EUR/GBP, GBP/EUR, and EUR/HUF widgets. Override the pairs with
 `GRYPHDASH_CURRENCY_PAIRS=USD/EUR,EUR/JPY`, or point tests at a fixture with
 `GRYPHDASH_CURRENCY_URL`. Provider executables own their API calls, response
 parsing, source names, and credentials; the collector only understands the

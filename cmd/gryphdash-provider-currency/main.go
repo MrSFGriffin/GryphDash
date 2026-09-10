@@ -25,7 +25,7 @@ func main() {
 	}
 	pairs := currency.ParsePairs(os.Getenv("GRYPHDASH_CURRENCY_PAIRS"))
 	if len(pairs) == 0 {
-		pairs = []currency.Pair{{Base: "EUR", Quote: "USD"}, {Base: "EUR", Quote: "GBP"}, {Base: "EUR", Quote: "HUF"}}
+		pairs = []currency.Pair{{Base: "EUR", Quote: "USD"}, {Base: "EUR", Quote: "GBP"}, {Base: "GBP", Quote: "EUR"}, {Base: "EUR", Quote: "HUF"}}
 	}
 	result := currency.Client{HTTPClient: &http.Client{}, BaseURL: os.Getenv("GRYPHDASH_CURRENCY_URL"), Pairs: pairs}.Read(context.Background())
 	if err := json.NewEncoder(os.Stdout).Encode(providerprotocol.Response{Version: providerprotocol.Version, Provider: "currency", Results: result}); err != nil {
