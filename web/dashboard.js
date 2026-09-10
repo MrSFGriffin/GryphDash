@@ -3,6 +3,7 @@
   'use strict';
   const STORAGE_KEY = 'gryphdash.layout.v1';
   const NAMED_LAYOUTS_KEY = 'gryphdash.layouts.v1';
+  const WIDGET_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}\//;
   const $ = id => document.getElementById(id);
   const catalog = new Map();
   const picker = $('widget-picker');
@@ -26,7 +27,7 @@
     if (!Array.isArray(items) || items.length > 500) throw new Error('Invalid layout');
     const ids = new Set();
     return items.map(item => {
-      if (!item || typeof item.id !== 'string' || !/^(codex|openrouter)\//.test(item.id) || item.id.length > 1000 || ids.has(item.id)) throw new Error('Invalid widget');
+      if (!item || typeof item.id !== 'string' || !WIDGET_ID_PATTERN.test(item.id) || item.id.length > 1000 || ids.has(item.id)) throw new Error('Invalid widget');
       ids.add(item.id); const clean = {id: item.id};
       for (const [key, min, max] of [['x', 0, 11], ['y', 0, 10000], ['w', 1, 12], ['h', 2, 30]]) { if (!Number.isInteger(item[key]) || item[key] < min || item[key] > max) throw new Error('Invalid position'); clean[key] = item[key]; }
       if (clean.x + clean.w > 12) throw new Error('Invalid width'); return clean;
@@ -255,7 +256,7 @@
   picker.addEventListener('click', event => { if (event.target === picker) picker.close(); });
   $('widget-search').addEventListener('input', renderPicker);
   $('edit-layout').addEventListener('click', () => setEditing(!editing));
-  $('save-layout').addEventListener('click', () => { const name = prompt('Name this layout:'); if (!name?.trim()) return; const items = grid.save(false, false, undefined, 12).map(({id, x, y, w, h}) => ({id, x: x ?? 0, y: y ?? 0, w: w ?? 4, h: h ?? 4})); const entry = {name: name.trim().slice(0, 100), items}; layoutStore.saved = layoutStore.saved.filter(item => item.name !== entry.name); layoutStore.saved.push(entry); try { activeLayoutName = entry.name; writeLayoutStore(); renderLayoutOptions(); $('layout-status').textContent = `Saved layout: ${entry.name}`; } catch (error) { $('layout-status').textContent = 'Browser storage unavailable; layout was not saved.'; } });
+  $('save-layout').addEventListener('click', () => { const name = prompt('Name this layout:'); if (!name?.trim()) return; const items = grid.save(false, false, undefined, 12).map(({id, x, y, w, h}) => ({id, x: x ?? 0, y: y ?? 0, w: w ?? 4, h: h ?? 4})); const entry = {name: name.trim().slice(0, 100), items}; layoutStore.current = items; layoutStore.saved = layoutStore.saved.filter(item => item.name !== entry.name); layoutStore.saved.push(entry); try { activeLayoutName = entry.name; writeLayoutStore(); renderLayoutOptions(); $('layout-status').textContent = `Saved layout: ${entry.name}`; } catch (error) { $('layout-status').textContent = 'Browser storage unavailable; layout was not saved.'; } });
   $('layout-select').addEventListener('change', event => { const name = event.target.value; const entry = name === 'Default' ? null : layoutStore.saved.find(item => item.name === name); if (name !== 'Default' && !entry) return; restoring = true; grid.removeAll(); grid.batchUpdate(); if (entry) { for (const item of entry.items) addWidget(item.id, item); } else loadDefaults(); grid.batchUpdate(false); restoring = false; activeLayoutName = name; saveLayout(); emptyState(); updateCountdowns(); renderLayoutOptions(); });
   function updateCountdowns() {
     document.querySelectorAll('[data-resets-at]').forEach(el => {
