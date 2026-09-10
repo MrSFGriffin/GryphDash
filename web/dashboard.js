@@ -16,6 +16,8 @@
   let grid;
   let pickerGroup = 'All';
   let activeLayoutName = 'Unsaved layout';
+  const pickerSidebar = document.querySelector('.picker-sidebar');
+  const pickerResizer = $('picker-resizer');
 
   function element(tag, className, text) {
     const el = document.createElement(tag);
@@ -264,6 +266,37 @@
   function openPicker() {
     $('widget-search').value = ''; renderPicker(); picker.showModal(); $('widget-search').focus();
   }
+  function resizePickerSidebar(clientX) {
+    const bounds = pickerSidebar.parentElement.getBoundingClientRect();
+    const min = 160;
+    const max = Math.max(min, bounds.width * 0.5);
+    const width = Math.max(min, Math.min(max, clientX - bounds.left));
+    pickerSidebar.style.setProperty('--picker-sidebar-width', `${width}px`);
+    pickerResizer.setAttribute('aria-valuenow', String(Math.round(width)));
+  }
+  pickerResizer.addEventListener('pointerdown', event => {
+    event.preventDefault(); 
+    pickerSidebar.classList.add('dragging'); 
+    pickerResizer.setPointerCapture(event.pointerId);
+    resizePickerSidebar(event.clientX);
+  });
+  pickerResizer.addEventListener('pointermove', event => {
+    if (pickerResizer.hasPointerCapture(event.pointerId)) resizePickerSidebar(event.clientX);
+  });
+  pickerResizer.addEventListener('pointerup', event => {
+    pickerSidebar.classList.remove('dragging'); 
+    pickerResizer.releasePointerCapture(event.pointerId);
+  });
+  pickerResizer.addEventListener('pointercancel', event => {
+    pickerSidebar.classList.remove('dragging'); 
+    pickerResizer.releasePointerCapture(event.pointerId);
+  });
+  pickerResizer.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    const current = pickerSidebar.getBoundingClientRect().width;
+    resizePickerSidebar(pickerSidebar.getBoundingClientRect().left + current + (event.key === 'ArrowRight' ? 24 : -24));
+  });
   $('add-widgets').addEventListener('click', openPicker);
   $('empty-add').addEventListener('click', openPicker);
   $('close-picker').addEventListener('click', () => picker.close());

@@ -33,8 +33,13 @@
     <div class="dialog-header"><div><p class="eyebrow">MAKE IT YOURS</p><h2 id="picker-title">Add widgets</h2></div><button id="close-picker">Done</button></div>
     <label for="widget-search">Find a metric</label>
     <input id="widget-search" type="search" placeholder="Search limits, credits, activity…" autocomplete="off">
-    <div id="picker-tabs" role="tablist" aria-label="Widget groups"></div>
-    <div id="widget-list"></div>
+    <div class="picker-body">
+      <aside class="picker-sidebar">
+        <div id="picker-tabs" role="tablist" aria-label="Widget groups" aria-orientation="vertical"></div>
+        <div id="picker-resizer" role="separator" aria-label="Resize provider list" aria-orientation="vertical" tabindex="0"></div>
+      </aside>
+      <div id="widget-list"></div>
+    </div>
   </dialog>
   <dialog id="preferences" aria-labelledby="preferences-title">
     <div class="dialog-header"><div><p class="eyebrow">DESKTOP SETTINGS</p><h2 id="preferences-title">Preferences</h2></div><button id="close-preferences" type="button">Done</button></div>
