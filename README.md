@@ -3,8 +3,7 @@
 A customizable widget dashboard for metrics from multiple providers. The Go server
 uses only the standard library and embeds all HTML, CSS, and JavaScript, including
 GridStack, in a single executable. Live metrics require the Codex CLI on the same
-machine. Built-in widget definitions live in the embedded [`widgets.json`](internal/dashboard/widgets.json)
-catalog, while external subprocess providers supply their own widget definitions at runtime.
+machine. External subprocess providers supply widget definitions at runtime.
 OpenRouter widgets use the optional `OPENROUTER_API_KEY` when it is configured.
 
 ## Run
@@ -78,24 +77,24 @@ initial selection is shown; all other metrics can be added from the picker.
 
 ## Widget catalog
 
-[`widgets.json`](internal/dashboard/widgets.json) is the source of truth for built-in widgets in the widget picker. Each definition has a
-stable `id`, `group`, display `name`, user-facing `description`, default layout
-size/visibility, and `logic`. Logic names are interpreted by the server: `scalar`
+Provider executables are the source of truth for widgets in the widget picker. Each
+definition has a stable `id`, `group`, display `name`, user-facing `description`,
+default layout size/visibility, and `logic`. Logic names are interpreted by the server: `scalar`
 reads a dotted field from an account, limits, or usage response; `limitWindow`
 adds remaining percentage and reset handling for a limit bucket; `daily` and
 `resetDetails` render structured lists; `timestamp` formats Unix timestamps; and
 `url` metadata records the HTTP source for provider adapters. Definitions
 with `scope: "limitBuckets"` expand once for every provider-returned bucket.
 
-The server validates required catalog fields at startup and embeds the JSON in the
-binary. Keep IDs stable when changing names or descriptions so users' saved
+The server validates required catalog fields when providers are discovered. Keep
+IDs stable when changing names or descriptions so users' saved
 browser layouts continue to work.
 
 ## Add custom widgets
 
 Widget definitions are data-driven. To add a metric from a provider that is
-already supported, add an entry to [`widgets.json`](internal/dashboard/widgets.json); do not edit
-the web or TUI renderers. Each entry needs a stable `id`, `group`, `name`,
+already supported, add an entry to that provider's catalog; do not edit the web
+or TUI renderers. Each entry needs a stable `id`, `group`, `name`,
 `description`, `width`, `height`, and `logic` object. For example:
 
 ```json

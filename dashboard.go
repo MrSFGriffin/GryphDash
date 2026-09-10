@@ -8,8 +8,6 @@ type dashboard = dashboardpkg.Dashboard
 type snapshot = dashboardpkg.Snapshot
 type result = dashboardpkg.Result
 
-var configuredWidgetCatalog = dashboardpkg.Catalog()
-
 func buildDashboard(s snapshot) dashboard { return dashboardpkg.BuildDashboard(s) }
 func buildDashboardWithCatalog(s snapshot, catalog widgetCatalog) dashboard {
 	return dashboardpkg.BuildDashboardWithCatalog(s, catalog)

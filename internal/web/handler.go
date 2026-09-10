@@ -18,7 +18,7 @@ type SnapshotProvider interface {
 }
 
 func NewHandler(provider SnapshotProvider, assets fs.FS) http.Handler {
-	return NewHandlerWithCatalog(provider, assets, dashboard.Catalog())
+	return NewHandlerWithCatalog(provider, assets, dashboard.WidgetCatalog{})
 }
 
 func NewHandlerWithCatalog(provider SnapshotProvider, assets fs.FS, catalog dashboard.WidgetCatalog) http.Handler {
@@ -113,8 +113,7 @@ func NewHandlerWithCatalogSourceAndRepositoriesAndService(provider SnapshotProvi
 }
 
 type repositoryAction struct {
-	URL     string `json:"url"`
-	Enabled *bool  `json:"enabled"`
+	URL string `json:"url"`
 }
 type providerAction struct {
 	Operation     string `json:"operation"`
@@ -143,16 +142,6 @@ func handleRepositoryAction(w http.ResponseWriter, r *http.Request, service *pro
 			return
 		}
 		repositories, err := service.AddRepository(request.URL)
-		writeRepositoryResult(w, repositories, err)
-		return
-	}
-	if r.Method == http.MethodPatch {
-		var request repositoryAction
-		if !decodeJSON(w, r, &request) || request.Enabled == nil {
-			http.Error(w, "URL and enabled are required", http.StatusBadRequest)
-			return
-		}
-		repositories, err := service.SetRepositoryEnabled(request.URL, *request.Enabled)
 		writeRepositoryResult(w, repositories, err)
 		return
 	}

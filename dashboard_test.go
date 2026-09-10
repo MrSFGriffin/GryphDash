@@ -20,7 +20,7 @@ import (
 
 func testCatalog(t *testing.T) widgetCatalog {
 	t.Helper()
-	catalog, err := dashboardpkg.MergeCatalog(dashboardpkg.Catalog(), codexprovider.Catalog(), openrouterprovider.Catalog())
+	catalog, err := dashboardpkg.MergeCatalog(dashboardpkg.WidgetCatalog{}, codexprovider.Catalog(), openrouterprovider.Catalog())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,8 +39,8 @@ func fixture(t *testing.T, raw string) map[string]any {
 func TestProviderRepositoryMetadataAPI(t *testing.T) {
 	c := collectorpkg.New(collectorpkg.Options{})
 	repositories := []providerrepo.Discovery{
-		{URL: "https://example.test/manifest.json", Enabled: true, Available: false, Error: "repository unavailable"},
-		{URL: "https://core.example/repository.json", Enabled: true, Available: true, Repository: &providerrepo.Repository{ID: "core", Name: "Core", Description: "Test"}, Providers: []providerrepo.Provider{{ID: "currency", Name: "Currency", Description: "Test", Version: "1.0.0"}}},
+		{URL: "https://example.test/manifest.json", Available: false, Error: "repository unavailable"},
+		{URL: "https://core.example/repository.json", Available: true, Repository: &providerrepo.Repository{ID: "core", Name: "Core", Description: "Test"}, Providers: []providerrepo.Provider{{ID: "currency", Name: "Currency", Description: "Test", Version: "1.0.0"}}},
 	}
 	w := httptest.NewRecorder()
 	newHandlerWithCatalogAndRepositories(c, testCatalog(t), repositories).ServeHTTP(w, httptest.NewRequest("GET", "/api/provider-repositories", nil))

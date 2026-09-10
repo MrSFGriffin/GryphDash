@@ -85,8 +85,13 @@ legend { color: #a6e4cc; padding: 0 8px; }
 .preference-row { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: #dce7f5; }
 .preference-row input { width: auto; accent-color: #a6e4cc; }
 .preference-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
-.provider-actions, .provider-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.provider-row { border-top: 1px solid #303b4b; padding: 14px 0; }
-.provider-row p { margin: 0; overflow-wrap: anywhere; }
+.provider-actions, .provider-repository-header, .provider-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+#provider-management-list { margin-top: 18px; }
+.provider-repository { border-top: 1px solid #303b4b; padding: 14px 0; }
+.provider-repository:first-child { border-top: 0; padding-top: 0; }
+.provider-repository-details { flex: 1 1 240px; min-width: 0; }
+.provider-repository-details p, .provider-item p { margin: 0; overflow-wrap: anywhere; }
+.provider-repository-providers { display: grid; gap: 8px; margin-top: 10px; }
+.provider-item { border-top: 1px solid #263242; padding: 8px 0 0 14px; }
 @media (max-width: 700px) { main { padding: 26px 12px; } .page-header { padding: 0 8px; } .toolbar { gap: 8px; } button { font-size: .85rem; } h1 { font-size: 2.1rem; } .value { font-size: 2rem; } }
 @media (max-width: 560px) { dialog { width: calc(100% - 16px); padding: 18px; } .picker-sidebar { flex-basis: 145px; min-width: 125px; } #widget-list { padding-left: 14px; } }

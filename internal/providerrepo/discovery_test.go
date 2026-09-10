@@ -21,7 +21,7 @@ func TestDiscoverRetainsPreviousMetadataWhenRepositoryIsUnavailable(t *testing.T
 		http.NotFound(w, request)
 	}))
 	client := TLSClient(&tls.Config{RootCAs: serverCertPool(t, server)})
-	settings := Settings{Repositories: []ConfiguredRepository{{URL: server.URL + "/repository.json", Enabled: true}}}
+	settings := Settings{Repositories: []ConfiguredRepository{{URL: server.URL + "/repository.json"}}}
 	first := Discover(context.Background(), settings, NewClient(client), nil)
 	if len(first) != 1 || !first[0].Available || first[0].Repository == nil {
 		t.Fatalf("first discovery = %+v", first)
@@ -36,17 +36,13 @@ func TestDiscoverRetainsPreviousMetadataWhenRepositoryIsUnavailable(t *testing.T
 	}
 }
 
-func TestDiscoverReportsDisabledAndInvalidRepositoriesWithoutFetching(t *testing.T) {
+func TestDiscoverReportsInvalidRepositories(t *testing.T) {
 	settings := Settings{Repositories: []ConfiguredRepository{
-		{URL: "https://example.test/disabled.json", Enabled: false},
-		{URL: "http://example.test/insecure.json", Enabled: true},
+		{URL: "http://example.test/insecure.json"},
 	}}
 	results := Discover(context.Background(), settings, NewClient(nil), nil)
-	if len(results) != 2 || results[0].Available || results[0].Error != "" {
-		t.Fatalf("disabled result = %+v", results[0])
-	}
-	if results[1].Error == "" || !strings.Contains(results[1].Error, "HTTPS") {
-		t.Fatalf("invalid result = %+v", results[1])
+	if len(results) != 1 || results[0].Error == "" || !strings.Contains(results[0].Error, "HTTPS") {
+		t.Fatalf("invalid result = %+v", results[0])
 	}
 }
 
@@ -64,7 +60,7 @@ func TestMetadataDiscoveryDoesNotDownloadArtifacts(t *testing.T) {
 	}))
 	defer server.Close()
 	client := TLSClient(&tls.Config{RootCAs: serverCertPool(t, server)})
-	settings := Settings{Repositories: []ConfiguredRepository{{URL: server.URL + "/repository.json", Enabled: true}}}
+	settings := Settings{Repositories: []ConfiguredRepository{{URL: server.URL + "/repository.json"}}}
 	results := Discover(context.Background(), settings, NewClient(client), nil)
 	if len(results) != 1 || results[0].Repository == nil || results[0].Error != "" {
 		t.Fatalf("discovery = %+v", results)

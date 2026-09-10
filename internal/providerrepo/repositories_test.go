@@ -20,7 +20,7 @@ func TestRepositorySettingsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Repositories) != 2 || got.Repositories[1].URL != "https://example.test/providers.json" || !got.Repositories[1].Enabled {
+	if len(got.Repositories) != 2 || got.Repositories[1].URL != "https://example.test/providers.json" {
 		t.Fatalf("loaded settings = %+v", got)
 	}
 	mode, err := os.Stat(path)
@@ -37,7 +37,7 @@ func TestRepositorySettingsMissingUsesCoreDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Repositories) != 1 || got.Repositories[0].URL != DefaultCoreRepositoryURL || !got.Repositories[0].Enabled {
+	if len(got.Repositories) != 1 || got.Repositories[0].URL != DefaultCoreRepositoryURL {
 		t.Fatalf("default settings = %+v", got)
 	}
 }
@@ -59,9 +59,6 @@ func TestRepositorySettingsMigratesLegacyCoreManifest(t *testing.T) {
 		if repository.URL == legacyCoreRepositoryURL {
 			t.Fatal("legacy repository URL was retained")
 		}
-		if !repository.Enabled {
-			t.Fatalf("migrated repository disabled: %+v", repository)
-		}
 	}
 }
 
@@ -75,7 +72,7 @@ func TestRepositorySettingsCollapsesLegacyProviderManifests(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Repositories) != 1 || got.Repositories[0].URL != DefaultCoreRepositoryURL || !got.Repositories[0].Enabled {
+	if len(got.Repositories) != 1 || got.Repositories[0].URL != DefaultCoreRepositoryURL {
 		t.Fatalf("migrated settings = %+v", got)
 	}
 }
@@ -88,23 +85,10 @@ func TestRepositorySettingsRejectUnsafeAndDuplicateRepositories(t *testing.T) {
 		t.Fatalf("duplicate repository error = %v", err)
 	}
 	settings := Settings{Repositories: []ConfiguredRepository{
-		{URL: "https://example.test/providers.json", Enabled: true},
-		{URL: "https://example.test/providers.json", Enabled: false},
+		{URL: "https://example.test/providers.json"},
+		{URL: "https://example.test/providers.json"},
 	}}
 	if err := ValidateSettings(settings); err == nil || !strings.Contains(err.Error(), "duplicate") {
 		t.Fatalf("duplicate validation error = %v", err)
-	}
-}
-
-func TestSetEnabled(t *testing.T) {
-	settings, err := SetEnabled(DefaultSettings(), DefaultCoreRepositoryURL, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if settings.Repositories[0].Enabled {
-		t.Fatal("repository remained enabled")
-	}
-	if _, err := SetEnabled(settings, "https://example.test/missing.json", true); err == nil {
-		t.Fatal("missing repository unexpectedly updated")
 	}
 }

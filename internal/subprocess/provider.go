@@ -187,7 +187,7 @@ func Catalog(parent context.Context, providers []Provider) dashboard.WidgetCatal
 // CatalogWithError loads and merges provider catalogs, rejecting invalid
 // catalogs and duplicate widget IDs across providers.
 func CatalogWithError(parent context.Context, providers []Provider) (dashboard.WidgetCatalog, error) {
-	merged := dashboard.Catalog()
+	merged := dashboard.WidgetCatalog{}
 	for _, provider := range providers {
 		catalog, err := provider.Widgets(parent)
 		if err != nil {

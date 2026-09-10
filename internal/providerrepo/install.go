@@ -270,7 +270,16 @@ func removeTemporaryFiles(directory string) error {
 func removeEmptyParents(directory, stop string) error {
 	for directory != stop && directory != filepath.Dir(directory) {
 		if err := os.Remove(directory); err != nil {
-			if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOTEMPTY) {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+			// Windows does not necessarily map ERROR_DIR_NOT_EMPTY to
+			// syscall.ENOTEMPTY. Inspecting the directory makes this cleanup
+			// portable and avoids reporting a harmless remaining sibling.
+			if entries, readErr := os.ReadDir(directory); readErr == nil && len(entries) > 0 {
+				return nil
+			}
+			if errors.Is(err, syscall.ENOTEMPTY) {
 				return nil
 			}
 			return err

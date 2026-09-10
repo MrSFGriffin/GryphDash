@@ -21,7 +21,7 @@ Repositories are explicitly trusted by the user. There will be no publisher-sign
 ## Configuration and lifecycle
 
 - Add a built-in default core-provider repository URL.
-- Store additional repository URLs and enabled/disabled state in the existing OS configuration directory.
+- Store additional repository URLs in the existing OS configuration directory.
 - Add repository management and provider Install, Update, and Remove actions to Web, Desktop, and TUI.
 - Adding a repository shows a warning that it can supply arbitrary native executables.
 - Repository configuration alone only fetches metadata; binaries download only after explicit installation.

@@ -314,21 +314,26 @@
       const [repositories, statuses] = await Promise.all([fetch('/api/provider-repositories', {cache: 'no-store'}).then(r => r.json()), fetch('/api/provider-status', {cache: 'no-store'}).then(r => r.json())]);
       providerList.replaceChildren();
       for (const repository of repositories) {
-        const row = element('section', 'provider-row');
-        const details = element('div'); details.append(element('strong', '', repository.repository?.name || 'Provider repository'));
+        const row = element('section', 'provider-repository');
+        const header = element('div', 'provider-repository-header');
+        const details = element('div', 'provider-repository-details'); details.append(element('strong', '', repository.repository?.name || 'Provider repository'));
         if (repository.repository?.description) details.append(element('p', 'note', repository.repository.description));
-        const state = repository.error ? (repository.repository ? 'stale' : 'unavailable') : (repository.enabled ? 'available' : 'disabled');
-        details.append(element('p', 'note', state + (repository.error ? `: ${repository.error}` : ''))); row.append(details);
-        const actions = element('div', 'provider-actions');
+        const state = repository.error ? (repository.repository ? 'stale' : 'unavailable') : 'available';
+        details.append(element('p', 'note', state + (repository.error ? `: ${repository.error}` : ''))); header.append(details);
+        const repositoryActions = element('div', 'provider-actions');
+        if (repository.url !== 'https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/repository.json') { const remove = element('button', '', 'Remove'); remove.onclick = async () => { if (confirm('Remove this repository configuration? Installed providers are retained.')) { await providerRequest('DELETE', {url: repository.url}); refreshProviderState(); } }; repositoryActions.append(remove); }
+        header.append(repositoryActions); row.append(header);
+        const providerRows = element('div', 'provider-repository-providers');
         const statusRows = statuses.filter(status => status.repositoryUrl === repository.url);
         for (const status of statusRows) {
+          const providerRow = element('div', 'provider-item');
           const label = status.name + ' · ' + status.state + (status.installedVersion ? ` (${status.installedVersion})` : '') + (status.error ? `: ${status.error}` : '');
-          const text = element('p', 'note', label); actions.append(text);
-          if (status.state === 'available' || status.state === 'update' || status.state === 'error') { const button = element('button', '', status.state === 'update' ? 'Update' : 'Install'); button.onclick = async () => { button.disabled = true; try { const response = await fetch('/api/provider-status', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({operation: status.state === 'update' ? 'update' : 'install', repositoryUrl: status.repositoryUrl, providerId: status.providerId})}); if (!response.ok) throw new Error((await response.text()) || 'Provider install failed'); await refreshProviderState(); } catch (error) { providerList.prepend(element('p', 'notice', error.message)); } }; actions.append(button); }
+          providerRow.append(element('p', 'note', label));
+          if (status.state === 'available' || status.state === 'update' || status.state === 'error') { const button = element('button', '', status.state === 'update' ? 'Update' : 'Install'); button.onclick = async () => { button.disabled = true; try { const response = await fetch('/api/provider-status', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({operation: status.state === 'update' ? 'update' : 'install', repositoryUrl: status.repositoryUrl, providerId: status.providerId})}); if (!response.ok) throw new Error((await response.text()) || 'Provider install failed'); await refreshProviderState(); } catch (error) { providerList.prepend(element('p', 'notice', error.message)); } }; providerRow.append(button); }
+          if (status.installedVersion) { const button = element('button', '', 'Uninstall'); button.onclick = async () => { if (!confirm(`Uninstall ${status.name}?`)) return; button.disabled = true; try { const response = await fetch('/api/provider-status', {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({repositoryUrl: status.repositoryUrl, providerId: status.providerId, version: status.installedVersion})}); if (!response.ok) throw new Error((await response.text()) || 'Provider uninstall failed'); await refreshProviderState(); } catch (error) { button.disabled = false; providerList.prepend(element('p', 'notice', error.message)); } }; providerRow.append(button); }
+          providerRows.append(providerRow);
         }
-        const toggle = element('button', '', repository.enabled ? 'Disable' : 'Enable'); toggle.onclick = async () => { await providerRequest('PATCH', {url: repository.url, enabled: !repository.enabled}); refreshProviderState(); }; actions.append(toggle);
-        const remove = element('button', '', 'Remove'); remove.onclick = async () => { if (confirm('Remove this repository configuration? Installed providers are retained.')) { await providerRequest('DELETE', {url: repository.url}); refreshProviderState(); } }; actions.append(remove);
-        row.append(actions); providerList.append(row);
+        row.append(providerRows); providerList.append(row);
       }
       if (!repositories.length) providerList.append(element('p', 'note', 'No repositories configured.'));
       if (statuses.some(status => status.state === 'installing')) setTimeout(refreshProviderState, 1000);
@@ -337,7 +342,9 @@
   $('manage-providers').addEventListener('click', () => { providerDialog.showModal(); refreshProviderState(); });
   $('close-provider-management').addEventListener('click', () => providerDialog.close());
   $('add-provider-repository').addEventListener('click', async () => { const url = prompt('HTTPS provider repository URL:'); if (!url) return; try { await providerRequest('POST', {url}); refreshProviderState(); } catch (error) { providerList.prepend(element('p', 'notice', error.message)); } });
-  providerDialog.addEventListener('click', event => { if (event.target === providerDialog) providerDialog.close(); });
+  let providerBackdropPointer = false;
+  providerDialog.addEventListener('pointerdown', event => { providerBackdropPointer = event.target === providerDialog; });
+  providerDialog.addEventListener('pointerup', event => { if (providerBackdropPointer && event.target === providerDialog) providerDialog.close(); providerBackdropPointer = false; });
   $('edit-layout').addEventListener('click', () => setEditing(!editing));
   $('save-layout').addEventListener('click', () => { const name = prompt('Name this layout:'); if (!name?.trim()) return; const items = grid.save(false, false, undefined, 12).map(({id, x, y, w, h}) => ({id, x: x ?? 0, y: y ?? 0, w: w ?? 4, h: h ?? 4})); const entry = {name: name.trim().slice(0, 100), items}; layoutStore.current = items; layoutStore.saved = layoutStore.saved.filter(item => item.name !== entry.name); layoutStore.saved.push(entry); try { activeLayoutName = entry.name; writeLayoutStore(); renderLayoutOptions(); $('layout-status').textContent = `Saved layout: ${entry.name}`; } catch (error) { $('layout-status').textContent = 'Browser storage unavailable; layout was not saved.'; } });
   function closeLayoutOptions(focusButton = false) {

@@ -10,8 +10,8 @@ import (
 )
 
 // The core repository publishes one index containing all provider groups.
-// These defaults can be disabled in local configuration, but remain the
-// defaults when no repository configuration has been created yet.
+// This default remains in place when no repository configuration has been
+// created yet.
 const (
 	legacyCoreRepositoryURL       = "https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifest.json"
 	legacyCodexRepositoryURL      = "https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifests/manifest-codex.json"
@@ -21,8 +21,7 @@ const (
 )
 
 type ConfiguredRepository struct {
-	URL     string `json:"url"`
-	Enabled bool   `json:"enabled"`
+	URL string `json:"url"`
 }
 
 type Settings struct {
@@ -31,7 +30,7 @@ type Settings struct {
 
 func DefaultSettings() Settings {
 	return Settings{Repositories: []ConfiguredRepository{
-		{URL: DefaultCoreRepositoryURL, Enabled: true},
+		{URL: DefaultCoreRepositoryURL},
 	}}
 }
 
@@ -68,11 +67,10 @@ func LoadSettings(path string) (Settings, error) {
 
 func migrateLegacyCoreRepository(settings *Settings) bool {
 	legacy := map[string]bool{legacyCoreRepositoryURL: true, legacyCodexRepositoryURL: true, legacyCurrencyRepositoryURL: true, legacyOpenRouterRepositoryURL: true}
-	enabled, found := false, false
+	found := false
 	filtered := settings.Repositories[:0]
 	for _, repository := range settings.Repositories {
 		if legacy[repository.URL] {
-			enabled = enabled || repository.Enabled
 			found = true
 			continue
 		}
@@ -87,7 +85,7 @@ func migrateLegacyCoreRepository(settings *Settings) bool {
 			return true
 		}
 	}
-	settings.Repositories = append(settings.Repositories, ConfiguredRepository{URL: DefaultCoreRepositoryURL, Enabled: enabled})
+	settings.Repositories = append(settings.Repositories, ConfiguredRepository{URL: DefaultCoreRepositoryURL})
 	return true
 }
 
@@ -157,19 +155,9 @@ func Add(settings Settings, rawURL string) (Settings, error) {
 			return Settings{}, fmt.Errorf("repository %q is already configured", rawURL)
 		}
 	}
-	settings.Repositories = append(settings.Repositories, ConfiguredRepository{URL: parsed.String(), Enabled: true})
+	settings.Repositories = append(settings.Repositories, ConfiguredRepository{URL: parsed.String()})
 	if err := ValidateSettings(settings); err != nil {
 		return Settings{}, err
 	}
 	return settings, nil
-}
-
-func SetEnabled(settings Settings, rawURL string, enabled bool) (Settings, error) {
-	for i := range settings.Repositories {
-		if settings.Repositories[i].URL == rawURL {
-			settings.Repositories[i].Enabled = enabled
-			return settings, ValidateSettings(settings)
-		}
-	}
-	return Settings{}, fmt.Errorf("provider repository %q is not configured", rawURL)
 }

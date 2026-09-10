@@ -240,13 +240,8 @@ func (m tuiModel) updateRepositories(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "a":
 		m.repositoryInputMode = true
 		m.repositoryInput = ""
-	case "e":
-		if len(repositories) > 0 {
-			r := repositories[m.repositoryFocus]
-			_, _ = m.providerService.SetRepositoryEnabled(r.URL, !r.Enabled)
-		}
 	case "x", "delete":
-		if len(repositories) > 0 {
+		if len(repositories) > 0 && repositories[m.repositoryFocus].URL != providerrepo.DefaultCoreRepositoryURL {
 			_, _ = m.providerService.RemoveRepository(repositories[m.repositoryFocus].URL)
 			if m.repositoryFocus >= len(repositories)-1 {
 				m.repositoryFocus = len(repositories) - 2
@@ -703,9 +698,6 @@ func (m tuiModel) repositoryView() string {
 		if repository.Error != "" {
 			state = "stale: " + repository.Error
 		}
-		if !repository.Enabled {
-			state = "disabled"
-		}
 		name := "Provider repository"
 		if repository.Repository != nil {
 			name = repository.Repository.Name
@@ -718,7 +710,7 @@ func (m tuiModel) repositoryView() string {
 		}
 	}
 	b.WriteString("\n")
-	b.WriteString(tuiDim.Render("↑/↓ choose • a add • e enable/disable • i install • u update • x remove • Esc close"))
+	b.WriteString(tuiDim.Render("↑/↓ choose • a add • i install • u update • x remove • Esc close"))
 	return b.String()
 }
 func (m tuiModel) pickerView() string {

@@ -247,7 +247,7 @@ func discoverDesktopExternalProviders(cfg config.Config) ([]subprocess.Provider,
 	external, err := subprocess.DiscoverWithManaged(cfg.ProviderDirectory, cacheDirectory)
 	if err != nil {
 		log.Printf("external provider discovery: %v", err)
-		return nil, dashboard.Catalog()
+		return nil, dashboard.WidgetCatalog{}
 	}
 	catalog, err := subprocess.CatalogWithError(context.Background(), external)
 	if err != nil {

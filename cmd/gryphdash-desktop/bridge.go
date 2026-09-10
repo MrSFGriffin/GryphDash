@@ -46,13 +46,6 @@ func (b *DesktopBridge) AddProviderRepository(url string) error {
 	_, err := b.providerService.AddRepository(url)
 	return err
 }
-func (b *DesktopBridge) SetProviderRepositoryEnabled(url string, enabled bool) error {
-	if b.providerService == nil {
-		return errors.New("provider management is unavailable")
-	}
-	_, err := b.providerService.SetRepositoryEnabled(url, enabled)
-	return err
-}
 func (b *DesktopBridge) RemoveProviderRepository(url string) error {
 	if b.providerService == nil {
 		return errors.New("provider management is unavailable")

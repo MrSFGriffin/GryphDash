@@ -1,7 +1,6 @@
 package dashboard
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -12,9 +11,6 @@ import (
 
 	"gryphdash/internal/metrics"
 )
-
-//go:embed widgets.json
-var widgetConfigData []byte
 
 type Result = metrics.Result
 type Snapshot = metrics.Snapshot
@@ -82,17 +78,6 @@ type dashboard struct {
 	LastRefresh string   `json:"lastRefresh,omitempty"`
 }
 
-func loadWidgetCatalog() widgetCatalog {
-	var catalog widgetCatalog
-	if err := json.Unmarshal(widgetConfigData, &catalog); err != nil {
-		panic(fmt.Sprintf("invalid widgets.json: %v", err))
-	}
-	if err := ValidateCatalog(catalog); err != nil {
-		panic(fmt.Sprintf("invalid widgets.json: %v", err))
-	}
-	return catalog
-}
-
 func ParseCatalog(data []byte) (WidgetCatalog, error) {
 	var catalog WidgetCatalog
 	if err := json.Unmarshal(data, &catalog); err != nil {
@@ -118,12 +103,9 @@ func ValidateCatalog(catalog WidgetCatalog) error {
 	return nil
 }
 
-var configuredWidgetCatalog = loadWidgetCatalog()
-
 type Widget = widget
 type Dashboard = dashboard
 
-func Catalog() WidgetCatalog { return configuredWidgetCatalog }
 func MergeCatalog(base WidgetCatalog, additions ...WidgetCatalog) (WidgetCatalog, error) {
 	merged := WidgetCatalog{Widgets: append([]WidgetConfig(nil), base.Widgets...)}
 	seen := make(map[string]bool, len(merged.Widgets))
@@ -145,7 +127,7 @@ func MergeCatalog(base WidgetCatalog, additions ...WidgetCatalog) (WidgetCatalog
 	return merged, nil
 }
 func BuildDashboard(s Snapshot) Dashboard {
-	return buildDashboardWithCatalog(s, configuredWidgetCatalog)
+	return buildDashboardWithCatalog(s, WidgetCatalog{})
 }
 func BuildDashboardWithCatalog(s Snapshot, catalog WidgetCatalog) Dashboard {
 	return buildDashboardWithCatalog(s, catalog)
@@ -302,7 +284,7 @@ func bucketID(template, bucket string) string {
 	return strings.ReplaceAll(template, "{bucket}", url.PathEscape(bucket))
 }
 func buildDashboard(s snapshot) dashboard {
-	return buildDashboardWithCatalog(s, configuredWidgetCatalog)
+	return buildDashboardWithCatalog(s, WidgetCatalog{})
 }
 func buildDashboardWithCatalog(s snapshot, catalog widgetCatalog) dashboard {
 	out := dashboard{Widgets: []widget{}}

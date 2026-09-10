@@ -86,36 +86,16 @@ func (s *Service) AddRepository(rawURL string) ([]Discovery, error) {
 		return nil, err
 	}
 	s.mu.Lock()
-	s.discoveries = append(s.discoveries, Discovery{URL: rawURL, Enabled: true})
-	result := append([]Discovery(nil), s.discoveries...)
-	s.mu.Unlock()
-	return result, nil
-}
-
-func (s *Service) SetRepositoryEnabled(rawURL string, enabled bool) ([]Discovery, error) {
-	settings, err := LoadSettings(s.settingsPath)
-	if err != nil {
-		return nil, err
-	}
-	settings, err = SetEnabled(settings, rawURL, enabled)
-	if err != nil {
-		return nil, err
-	}
-	if err := SaveSettings(s.settingsPath, settings); err != nil {
-		return nil, err
-	}
-	s.mu.Lock()
-	for i := range s.discoveries {
-		if s.discoveries[i].URL == rawURL {
-			s.discoveries[i].Enabled = enabled
-		}
-	}
+	s.discoveries = append(s.discoveries, Discovery{URL: rawURL})
 	result := append([]Discovery(nil), s.discoveries...)
 	s.mu.Unlock()
 	return result, nil
 }
 
 func (s *Service) RemoveRepository(rawURL string) ([]Discovery, error) {
+	if rawURL == DefaultCoreRepositoryURL {
+		return nil, fmt.Errorf("the built-in provider repository cannot be removed")
+	}
 	settings, err := LoadSettings(s.settingsPath)
 	if err != nil {
 		return nil, err

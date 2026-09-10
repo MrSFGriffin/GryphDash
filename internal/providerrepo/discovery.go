@@ -13,7 +13,6 @@ import (
 // to keep displaying known provider metadata during an outage.
 type Discovery struct {
 	URL        string      `json:"url"`
-	Enabled    bool        `json:"enabled"`
 	Available  bool        `json:"available"`
 	Error      string      `json:"error,omitempty"`
 	FetchedAt  time.Time   `json:"fetchedAt,omitempty"`
@@ -21,8 +20,8 @@ type Discovery struct {
 	Providers  []Provider  `json:"providers,omitempty"`
 }
 
-// Discover fetches metadata from enabled repositories. It never downloads an
-// artifact and includes disabled repositories in the result for management UI.
+// Discover fetches metadata from configured repositories. It never downloads
+// an artifact.
 // Previous results are used only as a metadata cache; they are not executed or
 // treated as installed providers.
 func Discover(ctx context.Context, settings Settings, client Client, previous []Discovery) []Discovery {
@@ -32,15 +31,11 @@ func Discover(ctx context.Context, settings Settings, client Client, previous []
 	}
 	results := make([]Discovery, 0, len(settings.Repositories))
 	for _, configured := range settings.Repositories {
-		result := Discovery{URL: configured.URL, Enabled: configured.Enabled}
+		result := Discovery{URL: configured.URL}
 		if previousResult, ok := previousByURL[configured.URL]; ok {
 			result.Repository = previousResult.Repository
 			result.Providers = append([]Provider(nil), previousResult.Providers...)
 			result.FetchedAt = previousResult.FetchedAt
-		}
-		if !configured.Enabled {
-			results = append(results, result)
-			continue
 		}
 		index, err := client.FetchRepository(ctx, configured.URL)
 		if err != nil {

@@ -15,7 +15,7 @@ import (
 
 func TestServiceRepositoryManagementAndStatuses(t *testing.T) {
 	settingsPath := filepath.Join(t.TempDir(), "repositories.json")
-	settings := Settings{Repositories: []ConfiguredRepository{{URL: "https://core.example/manifest.json", Enabled: true}}}
+	settings := Settings{Repositories: []ConfiguredRepository{{URL: "https://core.example/manifest.json"}}}
 	if err := SaveSettings(settingsPath, settings); err != nil {
 		t.Fatal(err)
 	}
@@ -28,11 +28,8 @@ func TestServiceRepositoryManagementAndStatuses(t *testing.T) {
 	if _, err := service.AddRepository("https://extra.example/manifest.json"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.SetRepositoryEnabled("https://extra.example/manifest.json", false); err != nil {
-		t.Fatal(err)
-	}
 	repositories := service.Repositories()
-	if len(repositories) != 2 || repositories[1].Enabled {
+	if len(repositories) != 2 {
 		t.Fatalf("repositories = %+v", repositories)
 	}
 	if _, err := service.RemoveRepository("https://extra.example/manifest.json"); err != nil {
@@ -40,6 +37,17 @@ func TestServiceRepositoryManagementAndStatuses(t *testing.T) {
 	}
 	if len(service.Repositories()) != 1 {
 		t.Fatalf("repositories after remove = %+v", service.Repositories())
+	}
+}
+
+func TestServiceCannotRemoveBuiltInRepository(t *testing.T) {
+	settingsPath := filepath.Join(t.TempDir(), "repositories.json")
+	if err := SaveSettings(settingsPath, DefaultSettings()); err != nil {
+		t.Fatal(err)
+	}
+	service := NewService(settingsPath, t.TempDir(), nil)
+	if _, err := service.RemoveRepository(DefaultCoreRepositoryURL); err == nil {
+		t.Fatal("built-in repository was removed")
 	}
 }
 
@@ -61,7 +69,7 @@ func TestServiceInstallUsesManagedCacheAndReportsInstalling(t *testing.T) {
 	defer server.Close()
 	manifest := installManifest(server.URL+"/provider", payload, "1.0.0")
 	settingsPath := filepath.Join(t.TempDir(), "repositories.json")
-	if err := SaveSettings(settingsPath, Settings{Repositories: []ConfiguredRepository{{URL: "https://example.test/repository.json", Enabled: true}}}); err != nil {
+	if err := SaveSettings(settingsPath, Settings{Repositories: []ConfiguredRepository{{URL: "https://example.test/repository.json"}}}); err != nil {
 		t.Fatal(err)
 	}
 	service := NewService(settingsPath, t.TempDir(), []Discovery{discoveryForManifest("https://example.test/repository.json", manifest)})
@@ -116,5 +124,5 @@ func TestServiceReportsTheExactRepositoryInstall(t *testing.T) {
 
 func discoveryForManifest(url string, manifest Manifest) Discovery {
 	repository := manifest.Repository
-	return Discovery{URL: url, Enabled: true, Available: true, Repository: &repository, Providers: []Provider{manifest.Provider}}
+	return Discovery{URL: url, Available: true, Repository: &repository, Providers: []Provider{manifest.Provider}}
 }
