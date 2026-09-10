@@ -13,7 +13,7 @@ mkdir -p "$output_dir"
 
 for provider in currency codex openrouter; do
   output_file="$output_dir/gryphdash-provider-$provider"
-  go build -o "$output_file" "$provider_repo/cmd/gryphdash-provider-$provider"
+  (cd "$provider_repo" && go build -o "$output_file" "./cmd/gryphdash-provider-$provider")
   printf 'Built %s\n' "$output_file"
 done
 
