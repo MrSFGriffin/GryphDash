@@ -20,7 +20,11 @@ func main() {
 		printUsage()
 		return
 	}
-	closeLogs, logErr := logging.Setup("gryphdash")
+	setupLogs := logging.Setup
+	if mode == "tui" {
+		setupLogs = logging.SetupQuiet
+	}
+	closeLogs, logErr := setupLogs("gryphdash")
 	if logErr != nil {
 		log.Printf("logging setup failed: %v", logErr)
 	} else {

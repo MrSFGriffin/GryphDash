@@ -24,6 +24,16 @@ func Directory(appName string) (string, error) {
 }
 
 func Setup(appName string) (func() error, error) {
+	return setup(appName, true)
+}
+
+// SetupQuiet configures file logging without mirroring entries to stderr.
+// This keeps terminal user interfaces from being interleaved with diagnostics.
+func SetupQuiet(appName string) (func() error, error) {
+	return setup(appName, false)
+}
+
+func setup(appName string, mirrorConsole bool) (func() error, error) {
 	directory, err := Directory(appName)
 	if err != nil {
 		return func() error { return nil }, err
@@ -39,7 +49,11 @@ func Setup(appName string) (func() error, error) {
 	if err != nil {
 		return func() error { return nil }, err
 	}
-	writer := fileFirstWriter{file: file, console: os.Stderr}
+	var console io.Writer
+	if mirrorConsole {
+		console = os.Stderr
+	}
+	writer := fileFirstWriter{file: file, console: console}
 	level := new(slog.LevelVar)
 	level.Set(parseLevel(os.Getenv("GRYPHDASH_LOG_LEVEL")))
 	logger := slog.New(slog.NewTextHandler(writer, &slog.HandlerOptions{Level: level}))

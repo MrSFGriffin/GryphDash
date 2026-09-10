@@ -52,7 +52,7 @@ func runTUI(ctx context.Context) error {
 	c, catalog := newCollectorAndCatalog(cfg)
 	go c.Run(ctx, cfg.RefreshInterval)
 	selected, layouts, active := loadTUILayout()
-	m := tuiModel{collector: c, catalog: catalog, selected: selected, layouts: layouts, activeLayout: active}
+	m := tuiModel{collector: c, catalog: catalog, selected: selected, layouts: layouts, activeLayout: active, focus: 0}
 	_, err = tea.NewProgram(m, tea.WithContext(ctx), tea.WithAltScreen()).Run()
 	return err
 }
@@ -166,6 +166,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.save()
 		}
 		m.dashboard = m.apply(m.available)
+		m.clampFocus()
 		return m, tuiTick()
 	}
 	return m, nil
@@ -346,6 +347,19 @@ func (m *tuiModel) navigate(dx, dy int) {
 	}
 	if found {
 		m.focus = best
+	}
+}
+
+func (m *tuiModel) clampFocus() {
+	if len(m.dashboard.Widgets) == 0 {
+		m.focus = 0
+		return
+	}
+	if m.focus < 0 {
+		m.focus = 0
+	}
+	if m.focus >= len(m.dashboard.Widgets) {
+		m.focus = len(m.dashboard.Widgets) - 1
 	}
 }
 

@@ -31,7 +31,7 @@ reads run about once per minute by default. Only one polling cycle runs at a tim
 45-second timeout. Each cycle starts a local `codex app-server` over stdin/stdout,
 reads metrics, and stops it. No model tasks are started or earned resets redeemed.
 
-To use the terminal dashboard instead, run `go run . tui` (or `./bin/gryphdash tui`
+To use the terminal dashboard instead, run `./run-tui.sh` or `go run . tui` (or `./bin/gryphdash tui`
 after building). It uses the same provider collectors and widget catalog, refreshes
 on the configured interval, and runs in a full-screen Bubble Tea interface styled
 with Lip Gloss. Press `a` to open the widget picker; use `/` to search with
