@@ -204,6 +204,7 @@ and [credits documentation](https://openrouter.ai/docs/api/api-reference/credits
 | `GRYPHDASH_DESKTOP_ADDR` | `127.0.0.1:8081` | Desktop HTTP listen address; must remain loopback-only |
 | `GRYPHDASH_CODEX_BIN` | `codex` | CLI executable name or full path (not shell arguments) |
 | `GRYPHDASH_PROVIDER_DIR` | executable directory or `./bin` | Directory containing `gryphdash-provider-*` external provider executables |
+| `GRYPHDASH_PROVIDER_CACHE` | OS cache (`gryphdash/providers`) | Managed provider cache; managed executables take precedence over local providers with the same name |
 | `GRYPHDASH_REFRESH_INTERVAL` | `1m` | Delay after each polling cycle; minimum `30s` |
 | `OPENROUTER_API_KEY` | unset | Bearer key for OpenRouter key usage and credits requests |
 

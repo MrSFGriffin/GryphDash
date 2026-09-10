@@ -64,7 +64,11 @@ func main() {
 		os.Exit(1)
 	}
 	providers := []collector.Reader{}
-	externalProviders, discoverErr := subprocess.Discover(cfg.ProviderDirectory)
+	cacheDirectory := cfg.ProviderCacheDirectory
+	if cacheDirectory == "" {
+		cacheDirectory, _ = providerrepo.DefaultCacheDir("gryphdash")
+	}
+	externalProviders, discoverErr := subprocess.DiscoverWithManaged(cfg.ProviderDirectory, cacheDirectory)
 	if discoverErr != nil {
 		log.Printf("external provider discovery: %v", discoverErr)
 	} else {
@@ -72,7 +76,10 @@ func main() {
 			providers = append(providers, provider)
 		}
 	}
-	widgetCatalog := subprocess.Catalog(context.Background(), externalProviders)
+	widgetCatalog, catalogErr := subprocess.CatalogWithError(context.Background(), externalProviders)
+	if catalogErr != nil {
+		log.Printf("external provider catalog rejected: %v", catalogErr)
+	}
 	repositories := discoverDesktopProviderRepositories()
 	collectorInstance := collector.New(collector.Options{Providers: providers})
 	serverRuntime, err := app.NewDesktop(app.Options{

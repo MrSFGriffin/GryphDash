@@ -18,6 +18,7 @@ import (
 	"gryphdash/internal/dashboard"
 	"gryphdash/internal/metrics"
 	"gryphdash/internal/providerprotocol"
+	"gryphdash/internal/providerrepo"
 )
 
 const defaultTimeout = 30 * time.Second
@@ -34,9 +35,46 @@ func New(name, executable string, args ...string) Provider {
 }
 
 // Discover returns providers whose executable names use the stable
-// gryphdash-provider-<name> convention. When directory is empty, the directory
-// containing the running executable is searched.
+// gryphdash-provider-<name> convention. Managed providers in the default cache
+// are included and take precedence. When directory is empty, the directory
+// containing the running executable is searched for local providers.
 func Discover(directory string) ([]Provider, error) {
+	managedDirectory, _ := providerrepo.DefaultCacheDir("gryphdash")
+	return DiscoverWithManaged(directory, managedDirectory)
+}
+
+// DiscoverWithManaged selects installed managed providers first, then local
+// subprocess providers for names not present in the managed cache.
+func DiscoverWithManaged(directory, managedDirectory string) ([]Provider, error) {
+	managed, err := providerrepo.DiscoverInstalled(managedDirectory)
+	if err != nil {
+		return nil, err
+	}
+	if err := providerrepo.ValidateInstalled(managed); err != nil {
+		return nil, err
+	}
+	selected := make(map[string]Provider, len(managed))
+	for _, installed := range managed {
+		selected[installed.ProviderID] = New(installed.ProviderID, installed.Path)
+	}
+	local, err := discoverLocal(directory)
+	if err != nil {
+		return nil, err
+	}
+	for _, provider := range local {
+		if _, managed := selected[provider.Name()]; !managed {
+			selected[provider.Name()] = provider
+		}
+	}
+	providers := make([]Provider, 0, len(selected))
+	for _, provider := range selected {
+		providers = append(providers, provider)
+	}
+	sort.Slice(providers, func(i, j int) bool { return providers[i].Name() < providers[j].Name() })
+	return providers, nil
+}
+
+func discoverLocal(directory string) ([]Provider, error) {
 	if directory != "" {
 		return discoverDirectory(directory)
 	}
@@ -49,6 +87,7 @@ func Discover(directory string) ([]Provider, error) {
 	}
 	seenDirectories := map[string]bool{}
 	providers := []Provider{}
+	seenNames := map[string]bool{}
 	for _, candidate := range directories {
 		if seenDirectories[candidate] {
 			continue
@@ -58,7 +97,12 @@ func Discover(directory string) ([]Provider, error) {
 		if err != nil {
 			continue
 		}
-		providers = append(providers, found...)
+		for _, provider := range found {
+			if !seenNames[provider.Name()] {
+				seenNames[provider.Name()] = true
+				providers = append(providers, provider)
+			}
+		}
 	}
 	sort.Slice(providers, func(i, j int) bool { return providers[i].Name() < providers[j].Name() })
 	return providers, nil
@@ -133,6 +177,16 @@ func (p Provider) Widgets(parent context.Context) (dashboard.WidgetCatalog, erro
 }
 
 func Catalog(parent context.Context, providers []Provider) dashboard.WidgetCatalog {
+	catalog, err := CatalogWithError(parent, providers)
+	if err != nil {
+		slog.Warn("provider catalog rejected", "error", err)
+	}
+	return catalog
+}
+
+// CatalogWithError loads and merges provider catalogs, rejecting invalid
+// catalogs and duplicate widget IDs across providers.
+func CatalogWithError(parent context.Context, providers []Provider) (dashboard.WidgetCatalog, error) {
 	merged := dashboard.Catalog()
 	for _, provider := range providers {
 		catalog, err := provider.Widgets(parent)
@@ -140,12 +194,13 @@ func Catalog(parent context.Context, providers []Provider) dashboard.WidgetCatal
 			slog.Warn("provider widgets unavailable", "provider", provider.Name(), "error", err)
 			continue
 		}
-		merged, err = dashboard.MergeCatalog(merged, catalog)
+		candidate, err := dashboard.MergeCatalog(merged, catalog)
 		if err != nil {
-			slog.Warn("provider widgets rejected", "provider", provider.Name(), "error", err)
+			return merged, fmt.Errorf("provider %q: %w", provider.Name(), err)
 		}
+		merged = candidate
 	}
-	return merged
+	return merged, nil
 }
 
 func (p Provider) run(parent context.Context, method string) (providerprotocol.Response, error) {
