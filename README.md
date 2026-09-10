@@ -21,6 +21,16 @@ go run . web
 For local development, `./run-web.sh` builds the subprocess providers and
 starts the web dashboard with them configured automatically.
 
+The released core provider sources live in the sibling
+`~/src/GryphDash-Providers` repository. If that checkout exists, the helper
+scripts use it automatically; set `GRYPHDASH_PROVIDERS_DIR` to choose another
+checkout. When it is absent, they build the identical providers kept in this
+repository, which remains the offline development fallback:
+
+```sh
+GRYPHDASH_PROVIDERS_DIR="$HOME/src/GryphDash-Providers" ./run-web.sh
+```
+
 An existing ChatGPT login can be reused. No API key or token environment variable
 is needed. Codex manages its own credentials; do not copy `auth.json` into this
 repository. An API-key-only login does not provide these subscription metrics.
