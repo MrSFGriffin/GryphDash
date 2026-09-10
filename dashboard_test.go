@@ -14,6 +14,7 @@ import (
 
 	collectorpkg "gryphdash/internal/collector"
 	dashboardpkg "gryphdash/internal/dashboard"
+	"gryphdash/internal/providerrepo"
 	codexprovider "gryphdash/providers/codex"
 )
 
@@ -34,6 +35,27 @@ func fixture(t *testing.T, raw string) map[string]any {
 	}
 	return m
 }
+
+func TestProviderRepositoryMetadataAPI(t *testing.T) {
+	c := collectorpkg.New(collectorpkg.Options{})
+	repositories := []providerrepo.Discovery{
+		{URL: "https://example.test/manifest.json", Enabled: true, Available: false, Error: "repository unavailable"},
+		{URL: "https://core.example/manifest.json", Enabled: true, Available: true, Manifest: &providerrepo.Manifest{Provider: providerrepo.Provider{ID: "currency", Name: "Currency", Version: "1.0.0"}}},
+	}
+	w := httptest.NewRecorder()
+	newHandlerWithCatalogAndRepositories(c, testCatalog(t), repositories).ServeHTTP(w, httptest.NewRequest("GET", "/api/provider-repositories", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	var got []providerrepo.Discovery
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Error == "" || got[1].Manifest.Provider.ID != "currency" {
+		t.Fatalf("metadata = %+v", got)
+	}
+}
+
 func TestDashboardMetrics(t *testing.T) {
 	now := time.Unix(1700000000, 0)
 	limits := fixture(t, `{"buckets":{"codex":{"primary":{"usedPercent":25,"windowDurationMins":300,"resetsAt":1700003600},"secondary":{"usedPercent":4,"windowDurationMins":10080},"credits":{"balance":"0","hasCredits":false,"unlimited":false}},"other":{"primary":{"usedPercent":10,"windowDurationMins":60}}},"rateLimitResetCredits":{"availableCount":2,"credits":[]}}`)

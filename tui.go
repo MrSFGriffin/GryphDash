@@ -49,7 +49,12 @@ func runTUI(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	c, catalog := newCollectorAndCatalog(cfg)
+	c, catalog, repositories := newCollectorAndCatalog(cfg)
+	for _, repository := range repositories {
+		if repository.Error != "" {
+			fmt.Printf("Provider repository unavailable: %s\n", repository)
+		}
+	}
 	go c.Run(ctx, cfg.RefreshInterval)
 	selected, layouts, active := loadTUILayout()
 	m := tuiModel{collector: c, catalog: catalog, selected: selected, layouts: layouts, activeLayout: active, focus: 0}

@@ -23,6 +23,7 @@ import (
 	"gryphdash/internal/config"
 	"gryphdash/internal/desktop"
 	"gryphdash/internal/logging"
+	"gryphdash/internal/providerrepo"
 	"gryphdash/internal/subprocess"
 	webhandler "gryphdash/internal/web"
 	webassets "gryphdash/web"
@@ -72,10 +73,11 @@ func main() {
 		}
 	}
 	widgetCatalog := subprocess.Catalog(context.Background(), externalProviders)
+	repositories := discoverDesktopProviderRepositories()
 	collectorInstance := collector.New(collector.Options{Providers: providers})
 	serverRuntime, err := app.NewDesktop(app.Options{
 		Collector: collectorInstance,
-		Handler:   webhandler.NewHandlerWithCatalog(collectorInstance, webassets.FS, widgetCatalog),
+		Handler:   webhandler.NewHandlerWithCatalogAndRepositories(collectorInstance, webassets.FS, widgetCatalog, repositories),
 		Address:   cfg.DesktopAddress,
 		Interval:  cfg.RefreshInterval,
 	})
@@ -210,6 +212,22 @@ func main() {
 		log.Print(err)
 		os.Exit(1)
 	}
+}
+
+func discoverDesktopProviderRepositories() []providerrepo.Discovery {
+	path, err := providerrepo.SettingsPath("gryphdash")
+	if err != nil {
+		log.Printf("provider repository settings path: %v", err)
+		return nil
+	}
+	settings, err := providerrepo.LoadSettings(path)
+	if err != nil {
+		log.Printf("provider repository settings: %v", err)
+		settings = providerrepo.DefaultSettings()
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return providerrepo.DiscoverConfigured(ctx, settings, nil, nil)
 }
 
 func shutdownDesktopRuntime(runtime *app.Runtime) {

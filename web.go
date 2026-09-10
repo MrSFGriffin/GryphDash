@@ -8,6 +8,7 @@ import (
 	"gryphdash/internal/app"
 	"gryphdash/internal/config"
 	dashboardpkg "gryphdash/internal/dashboard"
+	"gryphdash/internal/providerrepo"
 	webhandler "gryphdash/internal/web"
 	webassets "gryphdash/web"
 )
@@ -20,15 +21,19 @@ func newHandlerWithCatalog(c *collector, catalog dashboardpkg.WidgetCatalog) htt
 	return webhandler.NewHandlerWithCatalog(c, webassets.FS, catalog)
 }
 
+func newHandlerWithCatalogAndRepositories(c *collector, catalog dashboardpkg.WidgetCatalog, repositories []providerrepo.Discovery) http.Handler {
+	return webhandler.NewHandlerWithCatalogAndRepositories(c, webassets.FS, catalog, repositories)
+}
+
 func runWeb(ctx context.Context) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
-	c, catalog := newCollectorAndCatalog(cfg)
+	c, catalog, repositories := newCollectorAndCatalog(cfg)
 	runtime, err := app.New(app.Options{
 		Collector: c,
-		Handler:   newHandlerWithCatalog(c, catalog),
+		Handler:   newHandlerWithCatalogAndRepositories(c, catalog, repositories),
 		Address:   cfg.Address,
 		Interval:  cfg.RefreshInterval,
 	})

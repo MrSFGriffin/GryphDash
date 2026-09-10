@@ -10,6 +10,7 @@ import (
 
 	"gryphdash/internal/collector"
 	"gryphdash/internal/dashboard"
+	"gryphdash/internal/providerrepo"
 )
 
 type SnapshotProvider interface {
@@ -21,6 +22,10 @@ func NewHandler(provider SnapshotProvider, assets fs.FS) http.Handler {
 }
 
 func NewHandlerWithCatalog(provider SnapshotProvider, assets fs.FS, catalog dashboard.WidgetCatalog) http.Handler {
+	return NewHandlerWithCatalogAndRepositories(provider, assets, catalog, nil)
+}
+
+func NewHandlerWithCatalogAndRepositories(provider SnapshotProvider, assets fs.FS, catalog dashboard.WidgetCatalog, repositories []providerrepo.Discovery) http.Handler {
 	assetPaths := map[string]struct{ path, contentType string }{
 		"/":                         {"dashboard.html", "text/html; charset=utf-8"},
 		"/assets/dashboard.js":      {"dashboard.js", "text/javascript; charset=utf-8"},
@@ -31,7 +36,7 @@ func NewHandlerWithCatalog(provider SnapshotProvider, assets fs.FS, catalog dash
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		asset, found := assetPaths[r.URL.Path]
-		if !found && r.URL.Path != "/api/widgets" {
+		if !found && r.URL.Path != "/api/widgets" && r.URL.Path != "/api/provider-repositories" {
 			http.NotFound(w, r)
 			return
 		}
@@ -42,6 +47,16 @@ func NewHandlerWithCatalog(provider SnapshotProvider, assets fs.FS, catalog dash
 		}
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if r.URL.Path == "/api/provider-repositories" {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			if r.Method == http.MethodHead {
+				return
+			}
+			if err := json.NewEncoder(w).Encode(repositories); err != nil {
+				log.Printf("encode provider repositories: %v", err)
+			}
+			return
+		}
 		if r.URL.Path == "/api/widgets" {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			if r.Method == http.MethodHead {
