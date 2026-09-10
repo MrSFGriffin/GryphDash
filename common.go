@@ -19,7 +19,16 @@ func newCollector(cfg config.Config) *collector {
 }
 
 func newCollectorAndCatalog(cfg config.Config) (*collector, dashboardpkg.WidgetCatalog, []providerrepo.Discovery) {
-	providers := []collectorpkg.Reader{}
+	external, catalog := discoverExternalProviders(cfg)
+	providers := make([]collectorpkg.Reader, 0, len(external))
+	for _, provider := range external {
+		providers = append(providers, provider)
+	}
+	discoveries := discoverProviderRepositories()
+	return collectorpkg.New(collectorpkg.Options{Providers: providers}), catalog, discoveries
+}
+
+func discoverExternalProviders(cfg config.Config) ([]subprocess.Provider, dashboardpkg.WidgetCatalog) {
 	cacheDirectory := cfg.ProviderCacheDirectory
 	if cacheDirectory == "" {
 		cacheDirectory, _ = providerrepo.DefaultCacheDir("gryphdash")
@@ -28,16 +37,12 @@ func newCollectorAndCatalog(cfg config.Config) (*collector, dashboardpkg.WidgetC
 	if err != nil {
 		log.Printf("external provider discovery: %v", err)
 	} else {
-		for _, provider := range external {
-			providers = append(providers, provider)
-		}
 	}
-	discoveries := discoverProviderRepositories()
 	catalog, catalogErr := subprocess.CatalogWithError(context.Background(), external)
 	if catalogErr != nil {
 		log.Printf("external provider catalog rejected: %v", catalogErr)
 	}
-	return collectorpkg.New(collectorpkg.Options{Providers: providers}), catalog, discoveries
+	return external, catalog
 }
 
 func discoverProviderRepositories() []providerrepo.Discovery {

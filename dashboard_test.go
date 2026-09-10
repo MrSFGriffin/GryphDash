@@ -40,7 +40,7 @@ func TestProviderRepositoryMetadataAPI(t *testing.T) {
 	c := collectorpkg.New(collectorpkg.Options{})
 	repositories := []providerrepo.Discovery{
 		{URL: "https://example.test/manifest.json", Enabled: true, Available: false, Error: "repository unavailable"},
-		{URL: "https://core.example/manifest.json", Enabled: true, Available: true, Manifest: &providerrepo.Manifest{Provider: providerrepo.Provider{ID: "currency", Name: "Currency", Version: "1.0.0"}}},
+		{URL: "https://core.example/repository.json", Enabled: true, Available: true, Repository: &providerrepo.Repository{ID: "core", Name: "Core", Description: "Test"}, Providers: []providerrepo.Provider{{ID: "currency", Name: "Currency", Description: "Test", Version: "1.0.0"}}},
 	}
 	w := httptest.NewRecorder()
 	newHandlerWithCatalogAndRepositories(c, testCatalog(t), repositories).ServeHTTP(w, httptest.NewRequest("GET", "/api/provider-repositories", nil))
@@ -51,7 +51,7 @@ func TestProviderRepositoryMetadataAPI(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 2 || got[0].Error == "" || got[1].Manifest.Provider.ID != "currency" {
+	if len(got) != 2 || got[0].Error == "" || len(got[1].Providers) != 1 || got[1].Providers[0].ID != "currency" {
 		t.Fatalf("metadata = %+v", got)
 	}
 }

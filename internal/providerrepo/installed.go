@@ -56,7 +56,11 @@ func DiscoverInstalled(root string) ([]InstalledProvider, error) {
 				if statErr != nil {
 					return nil, fmt.Errorf("stat managed provider %q: %w", provider.Name(), statErr)
 				}
-				if !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 {
+				// Windows does not expose Unix executable permission bits. The
+				// .exe suffix selected above is the executable contract there;
+				// requiring 0111 would reject every successfully installed
+				// managed Windows provider.
+				if !info.Mode().IsRegular() || (runtime.GOOS != "windows" && info.Mode().Perm()&0111 == 0) {
 					return nil, fmt.Errorf("managed provider %q is not an executable file", provider.Name())
 				}
 				providers = append(providers, InstalledProvider{

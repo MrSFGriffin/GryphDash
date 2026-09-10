@@ -8,14 +8,14 @@ Repositories are explicitly trusted by the user. There will be no publisher-sign
 
 ## Provider repository format
 
-- Define a versioned HTTPS manifest format containing:
+- Define a versioned HTTPS repository index containing:
   - Repository metadata.
   - Provider ID, name, description, version, and protocol version.
   - Widget catalog metadata.
   - Platform-specific executable URLs and SHA-256 checksums.
 - Support release binaries for Linux amd64, Windows amd64, macOS amd64, and macOS arm64.
-- Treat repository URLs as manifest endpoints rather than requiring Git or a hosting-service API.
-- Require HTTPS for manifests and binary downloads.
+- Treat repository URLs as index endpoints rather than requiring Git or a hosting-service API.
+- Require HTTPS for indexes and binary downloads.
 - Use SHA-256 to detect corruption or mismatched downloads, while clearly documenting that it does not establish publisher authenticity.
 
 ## Configuration and lifecycle

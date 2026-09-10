@@ -1,10 +1,10 @@
 # Provider repositories
 
-GryphDash provider repositories are HTTPS-hosted manifest endpoints. A
-repository can advertise one provider release at a time, including its widget
-catalog and platform-specific artifacts.
+GryphDash provider repositories are HTTPS-hosted repository indexes. One
+repository contains one or more provider groups (for example, Codex, Currency,
+and OpenRouter), each with a widget catalog and platform-specific artifacts.
 
-## Manifest format
+## Repository index format
 
 The current schema is version 1:
 
@@ -16,24 +16,26 @@ The current schema is version 1:
     "name": "GryphDash Core Providers",
     "description": "First-party providers"
   },
-  "provider": {
-    "id": "currency",
-    "name": "Currency",
-    "description": "Reference exchange rates",
-    "version": "1.0.0",
-    "protocolVersion": 1,
-    "widgets": { "widgets": [] },
-    "artifacts": {
-      "linux-amd64": {
-        "url": "https://downloads.example/currency-linux-amd64",
-        "sha256": "64-hexadecimal-character-sha256"
-      },
-      "windows-amd64": {
-        "url": "https://downloads.example/currency-windows-amd64.exe",
-        "sha256": "64-hexadecimal-character-sha256"
+  "providers": [
+    {
+      "id": "currency",
+      "name": "Currency",
+      "description": "Reference exchange rates",
+      "version": "1.0.0",
+      "protocolVersion": 1,
+      "widgets": { "widgets": [] },
+      "artifacts": {
+        "linux-amd64": {
+          "url": "https://downloads.example/currency-linux-amd64",
+          "sha256": "64-hexadecimal-character-sha256"
+        },
+        "windows-amd64": {
+          "url": "https://downloads.example/currency-windows-amd64.exe",
+          "sha256": "64-hexadecimal-character-sha256"
+        }
       }
     }
-  }
+  ]
 }
 ```
 
@@ -44,7 +46,7 @@ Supported platforms are `linux-amd64`, `windows-amd64`, `darwin-amd64`, and
 `darwin-arm64`. Widget IDs must be unique within a provider and across the
 combined GryphDash catalog.
 
-Metadata discovery fetches only the manifest. It never downloads or executes an
+Metadata discovery fetches only the repository index. It never downloads or executes an
 artifact. Installation downloads the selected artifact, verifies SHA-256,
 sets executable permissions, and atomically places it in the managed cache.
 
@@ -73,15 +75,15 @@ cross-compiles the Codex, Currency, and OpenRouter executables and writes
 
 Repository configuration and provider installation are separate operations:
 
-1. Add an HTTPS manifest endpoint. GryphDash fetches metadata only.
-2. Review the repository/provider metadata and trust warning.
-3. Install a provider explicitly. Its state becomes `installing`, then
+1. Add one HTTPS provider repository index. GryphDash fetches metadata only.
+2. Review its provider groups and the trust warning.
+3. Install a selected provider group explicitly. Its state becomes `installing`, then
    `installed` after checksum verification.
 4. When newer metadata is available, the provider state becomes `update`.
    Updates are explicit and preserve the previous install until the new one is
    verified.
-5. Remove a provider explicitly when it is no longer needed. Removing a
-   repository configuration does not delete already-installed binaries.
+5. Remove a repository configuration when it is no longer wanted. This does
+   not delete already-installed binaries.
 
 The Web API exposes repository management at `/api/provider-repositories` and
 provider lifecycle actions/status at `/api/provider-status`. The desktop bridge

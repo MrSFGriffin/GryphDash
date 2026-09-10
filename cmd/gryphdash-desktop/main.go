@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/wailsapp/wails/v2"
@@ -21,6 +22,7 @@ import (
 	"gryphdash/internal/app"
 	"gryphdash/internal/collector"
 	"gryphdash/internal/config"
+	"gryphdash/internal/dashboard"
 	"gryphdash/internal/desktop"
 	"gryphdash/internal/logging"
 	"gryphdash/internal/providerrepo"
@@ -83,9 +85,23 @@ func main() {
 	repositories := discoverDesktopProviderRepositories()
 	providerService := newDesktopProviderService(cfg, repositories)
 	collectorInstance := collector.New(collector.Options{Providers: providers})
+	var catalogMu sync.RWMutex
+	if providerService != nil {
+		providerService.SetInstallCallback(func() {
+			external, refreshedCatalog := discoverDesktopExternalProviders(cfg)
+			readers := make([]collector.Reader, 0, len(external))
+			for _, provider := range external {
+				readers = append(readers, provider)
+			}
+			collectorInstance.SetProviders(readers)
+			catalogMu.Lock()
+			widgetCatalog = refreshedCatalog
+			catalogMu.Unlock()
+		})
+	}
 	serverRuntime, err := app.NewDesktop(app.Options{
 		Collector: collectorInstance,
-		Handler:   webhandler.NewHandlerWithCatalogAndRepositoriesAndService(collectorInstance, webassets.FS, widgetCatalog, repositories, providerService),
+		Handler:   webhandler.NewHandlerWithCatalogSourceAndRepositoriesAndService(collectorInstance, webassets.FS, func() dashboard.WidgetCatalog { catalogMu.RLock(); defer catalogMu.RUnlock(); return widgetCatalog }, repositories, providerService),
 		Address:   cfg.DesktopAddress,
 		Interval:  cfg.RefreshInterval,
 	})
@@ -220,6 +236,23 @@ func main() {
 		log.Print(err)
 		os.Exit(1)
 	}
+}
+
+func discoverDesktopExternalProviders(cfg config.Config) ([]subprocess.Provider, dashboard.WidgetCatalog) {
+	cacheDirectory := cfg.ProviderCacheDirectory
+	if cacheDirectory == "" {
+		cacheDirectory, _ = providerrepo.DefaultCacheDir("gryphdash")
+	}
+	external, err := subprocess.DiscoverWithManaged(cfg.ProviderDirectory, cacheDirectory)
+	if err != nil {
+		log.Printf("external provider discovery: %v", err)
+		return nil, dashboard.Catalog()
+	}
+	catalog, err := subprocess.CatalogWithError(context.Background(), external)
+	if err != nil {
+		log.Printf("external provider catalog rejected: %v", err)
+	}
+	return external, catalog
 }
 
 func newDesktopProviderService(cfg config.Config, repositories []providerrepo.Discovery) *providerrepo.Service {

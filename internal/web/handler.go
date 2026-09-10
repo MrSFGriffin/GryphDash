@@ -30,6 +30,12 @@ func NewHandlerWithCatalogAndRepositories(provider SnapshotProvider, assets fs.F
 }
 
 func NewHandlerWithCatalogAndRepositoriesAndService(provider SnapshotProvider, assets fs.FS, catalog dashboard.WidgetCatalog, repositories []providerrepo.Discovery, service *providerrepo.Service) http.Handler {
+	return NewHandlerWithCatalogSourceAndRepositoriesAndService(provider, assets, func() dashboard.WidgetCatalog { return catalog }, repositories, service)
+}
+
+// NewHandlerWithCatalogSourceAndRepositoriesAndService allows the application
+// to publish a catalog that can be refreshed after a managed provider install.
+func NewHandlerWithCatalogSourceAndRepositoriesAndService(provider SnapshotProvider, assets fs.FS, catalog func() dashboard.WidgetCatalog, repositories []providerrepo.Discovery, service *providerrepo.Service) http.Handler {
 	assetPaths := map[string]struct{ path, contentType string }{
 		"/":                         {"dashboard.html", "text/html; charset=utf-8"},
 		"/assets/dashboard.js":      {"dashboard.js", "text/javascript; charset=utf-8"},
@@ -61,7 +67,11 @@ func NewHandlerWithCatalogAndRepositoriesAndService(provider SnapshotProvider, a
 			if r.Method == http.MethodHead {
 				return
 			}
-			if err := json.NewEncoder(w).Encode(repositories); err != nil {
+			currentRepositories := repositories
+			if service != nil {
+				currentRepositories = service.Repositories()
+			}
+			if err := json.NewEncoder(w).Encode(currentRepositories); err != nil {
 				log.Printf("encode provider repositories: %v", err)
 			}
 			return
@@ -87,7 +97,7 @@ func NewHandlerWithCatalogAndRepositoriesAndService(provider SnapshotProvider, a
 			if r.Method == http.MethodHead {
 				return
 			}
-			if err := json.NewEncoder(w).Encode(dashboard.BuildDashboardWithCatalog(provider.Snapshot(), catalog)); err != nil {
+			if err := json.NewEncoder(w).Encode(dashboard.BuildDashboardWithCatalog(provider.Snapshot(), catalog())); err != nil {
 				log.Printf("encode widgets: %v", err)
 			}
 			return

@@ -9,15 +9,16 @@ import (
 )
 
 // Discovery describes the latest metadata attempt for one configured
-// repository. Manifest is retained when a later fetch fails, allowing callers
+// repository. Repository metadata is retained when a later fetch fails, allowing callers
 // to keep displaying known provider metadata during an outage.
 type Discovery struct {
-	URL       string    `json:"url"`
-	Enabled   bool      `json:"enabled"`
-	Available bool      `json:"available"`
-	Error     string    `json:"error,omitempty"`
-	FetchedAt time.Time `json:"fetchedAt,omitempty"`
-	Manifest  *Manifest `json:"manifest,omitempty"`
+	URL        string      `json:"url"`
+	Enabled    bool        `json:"enabled"`
+	Available  bool        `json:"available"`
+	Error      string      `json:"error,omitempty"`
+	FetchedAt  time.Time   `json:"fetchedAt,omitempty"`
+	Repository *Repository `json:"repository,omitempty"`
+	Providers  []Provider  `json:"providers,omitempty"`
 }
 
 // Discover fetches metadata from enabled repositories. It never downloads an
@@ -33,21 +34,24 @@ func Discover(ctx context.Context, settings Settings, client Client, previous []
 	for _, configured := range settings.Repositories {
 		result := Discovery{URL: configured.URL, Enabled: configured.Enabled}
 		if previousResult, ok := previousByURL[configured.URL]; ok {
-			result.Manifest = previousResult.Manifest
+			result.Repository = previousResult.Repository
+			result.Providers = append([]Provider(nil), previousResult.Providers...)
 			result.FetchedAt = previousResult.FetchedAt
 		}
 		if !configured.Enabled {
 			results = append(results, result)
 			continue
 		}
-		manifest, err := client.FetchManifest(ctx, configured.URL)
+		index, err := client.FetchRepository(ctx, configured.URL)
 		if err != nil {
 			result.Error = err.Error()
 			logRepositoryFailure(configured.URL, err)
 		} else {
 			result.Available = true
 			result.FetchedAt = time.Now().UTC()
-			result.Manifest = &manifest
+			repository := index.Repository
+			result.Repository = &repository
+			result.Providers = append([]Provider(nil), index.Providers...)
 		}
 		results = append(results, result)
 	}
@@ -66,8 +70,8 @@ func (d Discovery) String() string {
 	if d.Error != "" {
 		return fmt.Sprintf("%s: %s", d.URL, d.Error)
 	}
-	if d.Manifest == nil {
+	if d.Repository == nil {
 		return d.URL
 	}
-	return fmt.Sprintf("%s: %s %s", d.URL, d.Manifest.Provider.Name, d.Manifest.Provider.Version)
+	return fmt.Sprintf("%s: %s", d.URL, d.Repository.Name)
 }

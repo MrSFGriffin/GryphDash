@@ -4,8 +4,10 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"sync"
 
 	"gryphdash/internal/app"
+	collectorpkg "gryphdash/internal/collector"
 	"gryphdash/internal/config"
 	dashboardpkg "gryphdash/internal/dashboard"
 	"gryphdash/internal/providerrepo"
@@ -32,9 +34,23 @@ func runWeb(ctx context.Context) error {
 	}
 	c, catalog, repositories := newCollectorAndCatalog(cfg)
 	service := newProviderService(cfg, repositories)
+	var catalogMu sync.RWMutex
+	if service != nil {
+		service.SetInstallCallback(func() {
+			external, refreshedCatalog := discoverExternalProviders(cfg)
+			readers := make([]collectorpkg.Reader, 0, len(external))
+			for _, provider := range external {
+				readers = append(readers, provider)
+			}
+			c.SetProviders(readers)
+			catalogMu.Lock()
+			catalog = refreshedCatalog
+			catalogMu.Unlock()
+		})
+	}
 	runtime, err := app.New(app.Options{
 		Collector: c,
-		Handler:   webhandler.NewHandlerWithCatalogAndRepositoriesAndService(c, webassets.FS, catalog, repositories, service),
+		Handler:   webhandler.NewHandlerWithCatalogSourceAndRepositoriesAndService(c, webassets.FS, func() dashboardpkg.WidgetCatalog { catalogMu.RLock(); defer catalogMu.RUnlock(); return catalog }, repositories, service),
 		Address:   cfg.Address,
 		Interval:  cfg.RefreshInterval,
 	})

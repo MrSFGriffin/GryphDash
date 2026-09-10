@@ -30,6 +30,16 @@ type Collector struct {
 	providers []Reader
 }
 
+// SetProviders replaces the subprocess readers used by future refreshes.
+// Provider installation is explicit and may complete after the collector has
+// started, so callers can reload the managed provider set without restarting
+// the application.
+func (c *Collector) SetProviders(providers []Reader) {
+	c.mu.Lock()
+	c.providers = append([]Reader(nil), providers...)
+	c.mu.Unlock()
+}
+
 func New(options Options) *Collector {
 	return &Collector{providers: options.Providers, state: Snapshot{Results: map[string]Result{}}}
 }
@@ -65,9 +75,12 @@ func (c *Collector) Fail() {
 
 func (c *Collector) Refresh(parent context.Context) {
 	started := time.Now()
-	slog.Info("collector refresh started", "providers", len(c.providers))
-	responses := make(chan map[string]Result, len(c.providers))
-	for _, provider := range c.providers {
+	c.mu.RLock()
+	providers := append([]Reader(nil), c.providers...)
+	c.mu.RUnlock()
+	slog.Info("collector refresh started", "providers", len(providers))
+	responses := make(chan map[string]Result, len(providers))
+	for _, provider := range providers {
 		go func(p Reader) {
 			providerStarted := time.Now()
 			results := map[string]Result{}
@@ -88,13 +101,13 @@ func (c *Collector) Refresh(parent context.Context) {
 			results = p.Read(parent)
 		}(provider)
 	}
-	for range c.providers {
+	for range providers {
 		c.applyResults(<-responses)
 	}
 	c.mu.Lock()
 	c.state.LastRefresh = time.Now().UTC()
 	c.mu.Unlock()
-	slog.Info("collector refresh completed", "duration", time.Since(started), "providers", len(c.providers))
+	slog.Info("collector refresh completed", "duration", time.Since(started), "providers", len(providers))
 }
 
 func (c *Collector) applyResults(results map[string]Result) {

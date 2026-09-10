@@ -39,15 +39,26 @@ type ProviderStatus struct {
 // operation that downloads and executes no code (execution happens later via
 // normal subprocess discovery).
 type Service struct {
-	settingsPath string
-	manager      Manager
-	mu           sync.RWMutex
-	discoveries  []Discovery
-	installing   map[string]bool
+	settingsPath  string
+	manager       Manager
+	mu            sync.RWMutex
+	discoveries   []Discovery
+	installing    map[string]bool
+	installErrors map[string]string
+	onInstall     func()
 }
 
 func NewService(settingsPath, cacheRoot string, discoveries []Discovery) *Service {
-	return &Service{settingsPath: settingsPath, manager: NewManager(cacheRoot, nil), discoveries: append([]Discovery(nil), discoveries...), installing: map[string]bool{}}
+	return &Service{settingsPath: settingsPath, manager: NewManager(cacheRoot, nil), discoveries: append([]Discovery(nil), discoveries...), installing: map[string]bool{}, installErrors: map[string]string{}}
+}
+
+// SetInstallCallback registers a callback invoked after an install or update
+// finishes successfully. It is used by application runtimes to reload the
+// newly installed provider without restarting.
+func (s *Service) SetInstallCallback(callback func()) {
+	s.mu.Lock()
+	s.onInstall = callback
+	s.mu.Unlock()
 }
 
 func (s *Service) Repositories() []Discovery {
@@ -151,30 +162,32 @@ func (s *Service) Statuses() []ProviderStatus {
 	defer s.mu.RUnlock()
 	statuses := []ProviderStatus{}
 	for _, repository := range s.discoveries {
-		if repository.Manifest == nil {
+		if repository.Repository == nil {
 			continue
 		}
-		provider := repository.Manifest.Provider
-		status := ProviderStatus{RepositoryURL: repository.URL, RepositoryID: repository.Manifest.Repository.ID, ProviderID: provider.ID, Name: provider.Name, Version: provider.Version, State: StateAvailable}
-		if repository.Error != "" {
-			status.Error = repository.Error
-			status.State = StateStale
-			if !repository.Available && repository.Manifest == nil {
-				status.State = StateUnavailable
+		for _, provider := range repository.Providers {
+			status := ProviderStatus{RepositoryURL: repository.URL, RepositoryID: repository.Repository.ID, ProviderID: provider.ID, Name: provider.Name, Version: provider.Version, State: StateAvailable}
+			if repository.Error != "" {
+				status.Error = repository.Error
+				status.State = StateStale
 			}
-		}
-		if item, ok := byProvider[provider.ID]; ok && strings.Contains(item.Path, string(os.PathSeparator)+repositoryKey(repository.URL)+string(os.PathSeparator)) {
-			status.InstalledVersion = item.Version
-			if item.Version == provider.Version {
-				status.State = StateInstalled
-			} else {
-				status.State = StateUpdate
+			if item, ok := byProvider[provider.ID]; ok && strings.Contains(item.Path, string(os.PathSeparator)+repositoryKey(repository.URL)+string(os.PathSeparator)) {
+				status.InstalledVersion = item.Version
+				if item.Version == provider.Version {
+					status.State = StateInstalled
+				} else {
+					status.State = StateUpdate
+				}
 			}
+			if s.installing[provider.ID] {
+				status.State = StateInstalling
+			}
+			if err := s.installErrors[repository.URL+"\x00"+provider.ID]; err != "" {
+				status.Error = err
+				status.State = StateError
+			}
+			statuses = append(statuses, status)
 		}
-		if s.installing[provider.ID] {
-			status.State = StateInstalling
-		}
-		statuses = append(statuses, status)
 	}
 	return statuses
 }
@@ -183,9 +196,16 @@ func (s *Service) lifecycle(ctx context.Context, repositoryURL, providerID strin
 	s.mu.RLock()
 	var manifest *Manifest
 	for _, discovery := range s.discoveries {
-		if discovery.URL == repositoryURL && discovery.Manifest != nil && discovery.Manifest.Provider.ID == providerID {
-			copy := *discovery.Manifest
-			manifest = &copy
+		if discovery.URL != repositoryURL || discovery.Repository == nil {
+			continue
+		}
+		for _, provider := range discovery.Providers {
+			if provider.ID == providerID {
+				manifest = &Manifest{Version: ManifestVersion, Repository: *discovery.Repository, Provider: provider}
+				break
+			}
+		}
+		if manifest != nil {
 			break
 		}
 	}
@@ -211,12 +231,21 @@ func (s *Service) lifecycle(ctx context.Context, repositoryURL, providerID strin
 		}
 		s.mu.Lock()
 		delete(s.installing, key)
+		if err == nil {
+			delete(s.installErrors, repositoryURL+"\x00"+providerID)
+		} else {
+			s.installErrors[repositoryURL+"\x00"+providerID] = err.Error()
+		}
 		for i := range s.discoveries {
 			if s.discoveries[i].URL == repositoryURL && err != nil {
 				s.discoveries[i].Error = err.Error()
 			}
 		}
+		callback := s.onInstall
 		s.mu.Unlock()
+		if err == nil && callback != nil {
+			callback()
+		}
 	}()
 	return nil
 }
@@ -232,11 +261,19 @@ func (s *Service) RemoveProvider(repositoryURL, providerID, version string) erro
 	s.mu.RLock()
 	var repositoryID string
 	for _, discovery := range s.discoveries {
-		if discovery.URL == repositoryURL && discovery.Manifest != nil && discovery.Manifest.Provider.ID == providerID {
-			repositoryID = discovery.Manifest.Repository.ID
-			if version == "" {
-				version = discovery.Manifest.Provider.Version
+		if discovery.URL != repositoryURL || discovery.Repository == nil {
+			continue
+		}
+		for _, provider := range discovery.Providers {
+			if provider.ID == providerID {
+				repositoryID = discovery.Repository.ID
+				if version == "" {
+					version = provider.Version
+				}
+				break
 			}
+		}
+		if repositoryID != "" {
 			break
 		}
 	}

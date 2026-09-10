@@ -42,6 +42,44 @@ func TestRepositorySettingsMissingUsesCoreDefault(t *testing.T) {
 	}
 }
 
+func TestRepositorySettingsMigratesLegacyCoreManifest(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "repositories.json")
+	data := []byte(`{"repositories":[{"url":"https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifest.json","enabled":true}]}`)
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadSettings(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Repositories) != 1 || got.Repositories[0].URL != DefaultCoreRepositoryURL {
+		t.Fatalf("migrated settings = %+v", got)
+	}
+	for _, repository := range got.Repositories {
+		if repository.URL == legacyCoreRepositoryURL {
+			t.Fatal("legacy repository URL was retained")
+		}
+		if !repository.Enabled {
+			t.Fatalf("migrated repository disabled: %+v", repository)
+		}
+	}
+}
+
+func TestRepositorySettingsCollapsesLegacyProviderManifests(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "repositories.json")
+	data := []byte(`{"repositories":[{"url":"https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifests/manifest-codex.json","enabled":true},{"url":"https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifests/manifest-currency.json","enabled":false},{"url":"https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifests/manifest-openrouter.json","enabled":true}]}`)
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadSettings(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Repositories) != 1 || got.Repositories[0].URL != DefaultCoreRepositoryURL || !got.Repositories[0].Enabled {
+		t.Fatalf("migrated settings = %+v", got)
+	}
+}
+
 func TestRepositorySettingsRejectUnsafeAndDuplicateRepositories(t *testing.T) {
 	if _, err := Add(DefaultSettings(), "http://example.test/providers.json"); err == nil {
 		t.Fatal("insecure repository unexpectedly accepted")

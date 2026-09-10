@@ -28,8 +28,8 @@ const (
 var identifierPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 
 // Manifest describes one provider release and its platform-specific binaries.
-// Repository URLs are manifest endpoints; the manifest itself carries the
-// repository metadata so it can be displayed without downloading a binary.
+// It is embedded in a RepositoryIndex for repository discovery and retained as
+// the installation input for a single selected provider.
 type Manifest struct {
 	Version    int        `json:"version"`
 	Repository Repository `json:"repository"`
@@ -40,6 +40,14 @@ type Repository struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+}
+
+// RepositoryIndex is the metadata-only entry point for one provider
+// repository. Users configure this index, not individual provider manifests.
+type RepositoryIndex struct {
+	Version    int        `json:"version"`
+	Repository Repository `json:"repository"`
+	Providers  []Provider `json:"providers"`
 }
 
 type Provider struct {
@@ -127,6 +135,48 @@ func Validate(manifest Manifest) error {
 		}
 	}
 	return nil
+}
+
+// ValidateRepositoryIndex rejects invalid provider groups and duplicate widget
+// IDs before any provider artifact is downloaded or executed.
+func ValidateRepositoryIndex(index RepositoryIndex) error {
+	if index.Version != ManifestVersion {
+		return fmt.Errorf("unsupported provider repository version %d", index.Version)
+	}
+	if err := validateRepository(index.Repository); err != nil {
+		return err
+	}
+	if len(index.Providers) == 0 {
+		return errors.New("provider repository must contain at least one provider")
+	}
+	providerIDs := make(map[string]bool, len(index.Providers))
+	widgetIDs := map[string]bool{}
+	for _, provider := range index.Providers {
+		if err := Validate(Manifest{Version: index.Version, Repository: index.Repository, Provider: provider}); err != nil {
+			return err
+		}
+		if providerIDs[provider.ID] {
+			return fmt.Errorf("duplicate provider %q", provider.ID)
+		}
+		providerIDs[provider.ID] = true
+		for _, widget := range provider.Widgets.Widgets {
+			if widgetIDs[widget.ID] {
+				return fmt.Errorf("duplicate widget ID %q", widget.ID)
+			}
+			widgetIDs[widget.ID] = true
+		}
+	}
+	return nil
+}
+
+func validateRepository(repository Repository) error {
+	if err := validateIdentifier("repository ID", repository.ID); err != nil {
+		return err
+	}
+	if err := requireText("repository name", repository.Name); err != nil {
+		return err
+	}
+	return requireText("repository description", repository.Description)
 }
 
 // ArtifactFor returns the artifact for GOOS/GOARCH, or an error when the

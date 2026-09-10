@@ -706,7 +706,11 @@ func (m tuiModel) repositoryView() string {
 		if !repository.Enabled {
 			state = "disabled"
 		}
-		fmt.Fprintf(&b, "%s%s · %s\n", marker, repository.URL, state)
+		name := "Provider repository"
+		if repository.Repository != nil {
+			name = repository.Repository.Name
+		}
+		fmt.Fprintf(&b, "%s%s · %s\n", marker, name, state)
 		for _, status := range statuses {
 			if status.RepositoryURL == repository.URL {
 				fmt.Fprintf(&b, "   provider %s: %s\n", status.ProviderID, status.State)

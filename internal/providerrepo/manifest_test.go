@@ -74,6 +74,20 @@ func TestArtifactForMissingPlatform(t *testing.T) {
 	}
 }
 
+func TestRepositoryIndexRejectsDuplicateProvidersAndWidgets(t *testing.T) {
+	manifest := validManifest()
+	index := RepositoryIndex{Version: ManifestVersion, Repository: manifest.Repository, Providers: []Provider{manifest.Provider, manifest.Provider}}
+	if err := ValidateRepositoryIndex(index); err == nil || !strings.Contains(err.Error(), "duplicate provider") {
+		t.Fatalf("duplicate provider error = %v", err)
+	}
+	second := manifest.Provider
+	second.ID = "other"
+	index.Providers = []Provider{manifest.Provider, second}
+	if err := ValidateRepositoryIndex(index); err == nil || !strings.Contains(err.Error(), "duplicate widget") {
+		t.Fatalf("duplicate widget error = %v", err)
+	}
+}
+
 func TestValidateHTTPSURL(t *testing.T) {
 	for _, raw := range []string{"https://example.test/manifest.json", "https://example.test"} {
 		if err := ValidateHTTPSURL(raw); err != nil {

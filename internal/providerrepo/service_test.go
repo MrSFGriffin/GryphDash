@@ -20,7 +20,7 @@ func TestServiceRepositoryManagementAndStatuses(t *testing.T) {
 		t.Fatal(err)
 	}
 	manifest := installManifest("https://core.example/provider", []byte("provider"), "1.0.0")
-	service := NewService(settingsPath, t.TempDir(), []Discovery{{URL: settings.Repositories[0].URL, Enabled: true, Available: true, Manifest: &manifest}})
+	service := NewService(settingsPath, t.TempDir(), []Discovery{discoveryForManifest(settings.Repositories[0].URL, manifest)})
 	statuses := service.Statuses()
 	if len(statuses) != 1 || statuses[0].State != StateAvailable {
 		t.Fatalf("statuses = %+v", statuses)
@@ -45,7 +45,9 @@ func TestServiceRepositoryManagementAndStatuses(t *testing.T) {
 
 func TestServiceReportsStaleMetadata(t *testing.T) {
 	manifest := installManifest("https://stale.example/provider", []byte("provider"), "1.0.0")
-	service := NewService(filepath.Join(t.TempDir(), "repositories.json"), t.TempDir(), []Discovery{{URL: "https://stale.example/manifest.json", Enabled: true, Manifest: &manifest, Error: "repository unavailable"}})
+	discovery := discoveryForManifest("https://stale.example/repository.json", manifest)
+	discovery.Error = "repository unavailable"
+	service := NewService(filepath.Join(t.TempDir(), "repositories.json"), t.TempDir(), []Discovery{discovery})
 	statuses := service.Statuses()
 	if len(statuses) != 1 || statuses[0].State != StateStale || !strings.Contains(statuses[0].Error, "unavailable") {
 		t.Fatalf("statuses = %+v", statuses)
@@ -62,7 +64,7 @@ func TestServiceInstallUsesManagedCacheAndReportsInstalling(t *testing.T) {
 	if err := SaveSettings(settingsPath, Settings{Repositories: []ConfiguredRepository{{URL: "https://example.test/repository.json", Enabled: true}}}); err != nil {
 		t.Fatal(err)
 	}
-	service := NewService(settingsPath, t.TempDir(), []Discovery{{URL: "https://example.test/repository.json", Enabled: true, Available: true, Manifest: &manifest}})
+	service := NewService(settingsPath, t.TempDir(), []Discovery{discoveryForManifest("https://example.test/repository.json", manifest)})
 	service.manager.HTTPClient = TLSClient(&tls.Config{RootCAs: serverCertPool(t, server)})
 	if err := service.Install(context.Background(), "https://example.test/repository.json", manifest.Provider.ID); err != nil {
 		t.Fatal(err)
@@ -85,4 +87,9 @@ func TestServiceInstallUsesManagedCacheAndReportsInstalling(t *testing.T) {
 		}
 		time.Sleep(time.Millisecond)
 	}
+}
+
+func discoveryForManifest(url string, manifest Manifest) Discovery {
+	repository := manifest.Repository
+	return Discovery{URL: url, Enabled: true, Available: true, Repository: &repository, Providers: []Provider{manifest.Provider}}
 }

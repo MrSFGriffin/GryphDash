@@ -9,10 +9,16 @@ import (
 	"path/filepath"
 )
 
-// DefaultCoreRepositoryURL is the built-in source for the separately released
-// core providers. It can be disabled in local configuration, but remains the
-// default when no repository configuration has been created yet.
-const DefaultCoreRepositoryURL = "https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifest.json"
+// The core repository publishes one index containing all provider groups.
+// These defaults can be disabled in local configuration, but remain the
+// defaults when no repository configuration has been created yet.
+const (
+	legacyCoreRepositoryURL       = "https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifest.json"
+	legacyCodexRepositoryURL      = "https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifests/manifest-codex.json"
+	legacyCurrencyRepositoryURL   = "https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifests/manifest-currency.json"
+	legacyOpenRouterRepositoryURL = "https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/manifests/manifest-openrouter.json"
+	DefaultCoreRepositoryURL      = "https://raw.githubusercontent.com/MrSFGriffin/GryphDash-Providers/main/repository.json"
+)
 
 type ConfiguredRepository struct {
 	URL     string `json:"url"`
@@ -24,7 +30,9 @@ type Settings struct {
 }
 
 func DefaultSettings() Settings {
-	return Settings{Repositories: []ConfiguredRepository{{URL: DefaultCoreRepositoryURL, Enabled: true}}}
+	return Settings{Repositories: []ConfiguredRepository{
+		{URL: DefaultCoreRepositoryURL, Enabled: true},
+	}}
 }
 
 func SettingsPath(appName string) (string, error) {
@@ -47,10 +55,40 @@ func LoadSettings(path string) (Settings, error) {
 	if err := json.Unmarshal(data, &settings); err != nil {
 		return Settings{}, err
 	}
+	if migrateLegacyCoreRepository(&settings) {
+		if err := SaveSettings(path, settings); err != nil {
+			return Settings{}, err
+		}
+	}
 	if err := ValidateSettings(settings); err != nil {
 		return Settings{}, err
 	}
 	return settings, nil
+}
+
+func migrateLegacyCoreRepository(settings *Settings) bool {
+	legacy := map[string]bool{legacyCoreRepositoryURL: true, legacyCodexRepositoryURL: true, legacyCurrencyRepositoryURL: true, legacyOpenRouterRepositoryURL: true}
+	enabled, found := false, false
+	filtered := settings.Repositories[:0]
+	for _, repository := range settings.Repositories {
+		if legacy[repository.URL] {
+			enabled = enabled || repository.Enabled
+			found = true
+			continue
+		}
+		filtered = append(filtered, repository)
+	}
+	if !found {
+		return false
+	}
+	settings.Repositories = filtered
+	for _, repository := range settings.Repositories {
+		if repository.URL == DefaultCoreRepositoryURL {
+			return true
+		}
+	}
+	settings.Repositories = append(settings.Repositories, ConfiguredRepository{URL: DefaultCoreRepositoryURL, Enabled: enabled})
+	return true
 }
 
 // SaveSettings atomically replaces the settings file and restricts it to the
