@@ -9,22 +9,75 @@ import (
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"gryphdash/internal/desktop"
+	"gryphdash/internal/providerrepo"
 )
 
 // DesktopBridge is the deliberately small native API exposed to the Wails
 // frontend. Browser sessions do not receive these bindings.
 type DesktopBridge struct {
-	controller    *desktop.Controller
-	contextFn     func() context.Context
-	settingsPath  string
-	settingsMu    sync.RWMutex
-	settings      desktop.Settings
-	launchAtLogin desktop.LaunchAtLogin
-	scopeMu       sync.RWMutex
-	scope         map[string]bool
+	controller      *desktop.Controller
+	contextFn       func() context.Context
+	settingsPath    string
+	settingsMu      sync.RWMutex
+	settings        desktop.Settings
+	launchAtLogin   desktop.LaunchAtLogin
+	scopeMu         sync.RWMutex
+	scope           map[string]bool
+	providerService *providerrepo.Service
 }
 
 func (b *DesktopBridge) RefreshNow() { b.controller.Refresh(b.contextFn()) }
+func (b *DesktopBridge) ProviderRepositories() []providerrepo.Discovery {
+	if b.providerService == nil {
+		return nil
+	}
+	return b.providerService.Repositories()
+}
+func (b *DesktopBridge) ProviderStatuses() []providerrepo.ProviderStatus {
+	if b.providerService == nil {
+		return nil
+	}
+	return b.providerService.Statuses()
+}
+func (b *DesktopBridge) AddProviderRepository(url string) error {
+	if b.providerService == nil {
+		return errors.New("provider management is unavailable")
+	}
+	_, err := b.providerService.AddRepository(url)
+	return err
+}
+func (b *DesktopBridge) SetProviderRepositoryEnabled(url string, enabled bool) error {
+	if b.providerService == nil {
+		return errors.New("provider management is unavailable")
+	}
+	_, err := b.providerService.SetRepositoryEnabled(url, enabled)
+	return err
+}
+func (b *DesktopBridge) RemoveProviderRepository(url string) error {
+	if b.providerService == nil {
+		return errors.New("provider management is unavailable")
+	}
+	_, err := b.providerService.RemoveRepository(url)
+	return err
+}
+func (b *DesktopBridge) InstallProvider(url, providerID string) error {
+	if b.providerService == nil {
+		return errors.New("provider management is unavailable")
+	}
+	return b.providerService.Install(context.Background(), url, providerID)
+}
+func (b *DesktopBridge) UpdateProvider(url, providerID string) error {
+	if b.providerService == nil {
+		return errors.New("provider management is unavailable")
+	}
+	return b.providerService.Update(context.Background(), url, providerID)
+}
+func (b *DesktopBridge) RemoveProvider(url, providerID, version string) error {
+	if b.providerService == nil {
+		return errors.New("provider management is unavailable")
+	}
+	return b.providerService.RemoveProvider(url, providerID, version)
+}
 func (b *DesktopBridge) ShowWindow() { b.controller.Show(b.contextFn()) }
 func (b *DesktopBridge) HideWindow() { b.controller.Hide(b.contextFn()) }
 func (b *DesktopBridge) Quit()       { b.controller.Quit(b.contextFn()) }

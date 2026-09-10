@@ -13,6 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"gryphdash/internal/config"
+	"gryphdash/internal/providerrepo"
 )
 
 type tuiTickMsg struct{}
@@ -42,6 +43,11 @@ type tuiModel struct {
 	nameInput            string
 	nameMode, loadMode   bool
 	loadFocus            int
+	providerService      *providerrepo.Service
+	repositoryMode       bool
+	repositoryFocus      int
+	repositoryInput      string
+	repositoryInputMode  bool
 }
 
 func runTUI(ctx context.Context) error {
@@ -50,6 +56,7 @@ func runTUI(ctx context.Context) error {
 		return err
 	}
 	c, catalog, repositories := newCollectorAndCatalog(cfg)
+	service := newProviderService(cfg, repositories)
 	for _, repository := range repositories {
 		if repository.Error != "" {
 			fmt.Printf("Provider repository unavailable: %s\n", repository)
@@ -57,7 +64,7 @@ func runTUI(ctx context.Context) error {
 	}
 	go c.Run(ctx, cfg.RefreshInterval)
 	selected, layouts, active := loadTUILayout()
-	m := tuiModel{collector: c, catalog: catalog, selected: selected, layouts: layouts, activeLayout: active, focus: 0}
+	m := tuiModel{collector: c, catalog: catalog, selected: selected, layouts: layouts, activeLayout: active, focus: 0, providerService: service}
 	_, err = tea.NewProgram(m, tea.WithContext(ctx), tea.WithAltScreen()).Run()
 	return err
 }
@@ -66,6 +73,9 @@ func tuiTick() tea.Cmd           { return tea.Tick(time.Second, func(time.Time) 
 func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if m.repositoryMode {
+			return m.updateRepositories(msg)
+		}
 		if m.nameMode {
 			return m.updateName(msg)
 		}
@@ -151,6 +161,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
+		case "p":
+			m.repositoryMode = true
+			m.repositoryFocus = 0
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -173,6 +186,83 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.dashboard = m.apply(m.available)
 		m.clampFocus()
 		return m, tuiTick()
+	}
+	return m, nil
+}
+
+func (m tuiModel) updateRepositories(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.repositoryInputMode {
+		switch msg.String() {
+		case "esc":
+			m.repositoryInputMode = false
+		case "enter":
+			if strings.TrimSpace(m.repositoryInput) != "" && m.providerService != nil {
+				if _, err := m.providerService.AddRepository(strings.TrimSpace(m.repositoryInput)); err != nil {
+					m.repositoryInput = "error: " + err.Error()
+				} else {
+					m.repositoryInput = ""
+					m.repositoryInputMode = false
+				}
+			}
+		case "backspace":
+			if len(m.repositoryInput) > 0 {
+				m.repositoryInput = m.repositoryInput[:len(m.repositoryInput)-1]
+			}
+		default:
+			if len(msg.String()) == 1 {
+				m.repositoryInput += msg.String()
+			}
+		}
+		return m, nil
+	}
+	repositories := m.providerService.Repositories()
+	statuses := m.providerService.Statuses()
+	var selectedStatus *providerrepo.ProviderStatus
+	if len(repositories) > 0 {
+		for i := range statuses {
+			if statuses[i].RepositoryURL == repositories[m.repositoryFocus].URL {
+				selectedStatus = &statuses[i]
+				break
+			}
+		}
+	}
+	switch msg.String() {
+	case "esc", "p":
+		m.repositoryMode = false
+	case "up", "k":
+		if m.repositoryFocus > 0 {
+			m.repositoryFocus--
+		}
+	case "down", "j":
+		if m.repositoryFocus < len(repositories)-1 {
+			m.repositoryFocus++
+		}
+	case "a":
+		m.repositoryInputMode = true
+		m.repositoryInput = ""
+	case "e":
+		if len(repositories) > 0 {
+			r := repositories[m.repositoryFocus]
+			_, _ = m.providerService.SetRepositoryEnabled(r.URL, !r.Enabled)
+		}
+	case "x", "delete":
+		if len(repositories) > 0 {
+			_, _ = m.providerService.RemoveRepository(repositories[m.repositoryFocus].URL)
+			if m.repositoryFocus >= len(repositories)-1 {
+				m.repositoryFocus = len(repositories) - 2
+			}
+			if m.repositoryFocus < 0 {
+				m.repositoryFocus = 0
+			}
+		}
+	case "i", "u":
+		if selectedStatus != nil {
+			if msg.String() == "u" {
+				_ = m.providerService.Update(context.Background(), selectedStatus.RepositoryURL, selectedStatus.ProviderID)
+			} else {
+				_ = m.providerService.Install(context.Background(), selectedStatus.RepositoryURL, selectedStatus.ProviderID)
+			}
+		}
 	}
 	return m, nil
 }
@@ -522,6 +612,9 @@ var (
 )
 
 func (m tuiModel) View() string {
+	if m.repositoryMode {
+		return m.repositoryView()
+	}
 	if m.nameMode {
 		return tuiTitle.Render("Name layout") + "\n\n" + m.nameInput + "_\n\n" + tuiDim.Render("Enter save • Esc cancel")
 	}
@@ -543,7 +636,7 @@ func (m tuiModel) View() string {
 	if m.picker {
 		return m.pickerView()
 	}
-	controls := "a add • d delete • arrows move/focus • n name • m manage layouts • q quit"
+	controls := "a add • d delete • arrows move/focus • p providers • n name • m manage layouts • q quit"
 	if m.picker {
 		controls = "Add widget: ↑/↓ choose • Enter toggle • Esc close"
 	}
@@ -585,6 +678,43 @@ func (m tuiModel) View() string {
 		b.WriteByte('\n')
 	}
 	b.WriteByte('\n')
+	return b.String()
+}
+
+func (m tuiModel) repositoryView() string {
+	var b strings.Builder
+	b.WriteString(tuiTitle.Render("Provider repositories"))
+	b.WriteString("\n\n")
+	b.WriteString(tuiDim.Render("Warning: repositories can supply arbitrary native executables. Only add repositories you trust."))
+	b.WriteString("\n\n")
+	if m.repositoryInputMode {
+		b.WriteString("Repository URL: " + m.repositoryInput + "_\n\n")
+		b.WriteString(tuiDim.Render("Enter add • Esc cancel"))
+		return b.String()
+	}
+	repositories := m.providerService.Repositories()
+	statuses := m.providerService.Statuses()
+	for i, repository := range repositories {
+		marker := "  "
+		if i == m.repositoryFocus {
+			marker = "> "
+		}
+		state := "available"
+		if repository.Error != "" {
+			state = "stale: " + repository.Error
+		}
+		if !repository.Enabled {
+			state = "disabled"
+		}
+		fmt.Fprintf(&b, "%s%s · %s\n", marker, repository.URL, state)
+		for _, status := range statuses {
+			if status.RepositoryURL == repository.URL {
+				fmt.Fprintf(&b, "   provider %s: %s\n", status.ProviderID, status.State)
+			}
+		}
+	}
+	b.WriteString("\n")
+	b.WriteString(tuiDim.Render("↑/↓ choose • a add • e enable/disable • i install • u update • x remove • Esc close"))
 	return b.String()
 }
 func (m tuiModel) pickerView() string {

@@ -22,7 +22,7 @@ func newHandlerWithCatalog(c *collector, catalog dashboardpkg.WidgetCatalog) htt
 }
 
 func newHandlerWithCatalogAndRepositories(c *collector, catalog dashboardpkg.WidgetCatalog, repositories []providerrepo.Discovery) http.Handler {
-	return webhandler.NewHandlerWithCatalogAndRepositories(c, webassets.FS, catalog, repositories)
+	return webhandler.NewHandlerWithCatalogAndRepositoriesAndService(c, webassets.FS, catalog, repositories, nil)
 }
 
 func runWeb(ctx context.Context) error {
@@ -31,9 +31,10 @@ func runWeb(ctx context.Context) error {
 		return err
 	}
 	c, catalog, repositories := newCollectorAndCatalog(cfg)
+	service := newProviderService(cfg, repositories)
 	runtime, err := app.New(app.Options{
 		Collector: c,
-		Handler:   newHandlerWithCatalogAndRepositories(c, catalog, repositories),
+		Handler:   webhandler.NewHandlerWithCatalogAndRepositoriesAndService(c, webassets.FS, catalog, repositories, service),
 		Address:   cfg.Address,
 		Interval:  cfg.RefreshInterval,
 	})

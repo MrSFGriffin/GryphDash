@@ -55,3 +55,15 @@ func discoverProviderRepositories() []providerrepo.Discovery {
 	defer cancel()
 	return providerrepo.DiscoverConfigured(ctx, settings, &http.Client{Timeout: 10 * time.Second}, nil)
 }
+
+func newProviderService(cfg config.Config, repositories []providerrepo.Discovery) *providerrepo.Service {
+	settingsPath, err := providerrepo.SettingsPath("gryphdash")
+	if err != nil {
+		return nil
+	}
+	cacheDirectory := cfg.ProviderCacheDirectory
+	if cacheDirectory == "" {
+		cacheDirectory, _ = providerrepo.DefaultCacheDir("gryphdash")
+	}
+	return providerrepo.NewService(settingsPath, cacheDirectory, repositories)
+}

@@ -19,6 +19,7 @@
         <button id="edit-layout" aria-pressed="false" disabled>Edit dashboard</button>
         <button id="save-layout" disabled>Create named layout</button>
         <button id="native-refresh" hidden>Refresh now</button>
+        <button id="manage-providers">Providers</button>
         <label class="layout-label" for="layout-select">Layout</label><div class="layout-picker"><button id="layout-select" type="button" aria-haspopup="listbox" aria-expanded="false" disabled>Default</button><div id="layout-options" class="layout-options" role="listbox" aria-label="Layout" hidden></div></div>
       </nav>
     </header>
@@ -57,6 +58,12 @@
     </fieldset>
     <p id="preferences-status" class="note" role="status"></p>
     <div class="preference-actions"><button id="open-configuration" type="button">Open configuration folder</button><button id="open-logs" type="button">Open logs folder</button></div>
+  </dialog>
+  <dialog id="provider-management" aria-labelledby="provider-management-title">
+    <div class="dialog-header"><div><p class="eyebrow">TRUSTED SOURCES</p><h2 id="provider-management-title">Provider repositories</h2></div><button id="close-provider-management" type="button">Done</button></div>
+    <p class="notice">Repositories can supply arbitrary native executables. Add only repositories you trust. Configuration fetches metadata; binaries download only when you install them.</p>
+    <div class="provider-actions"><button id="add-provider-repository" class="primary" type="button">Add repository</button></div>
+    <div id="provider-management-list" aria-live="polite"><p class="note">Loading provider state…</p></div>
   </dialog>
 </body>
 </html>

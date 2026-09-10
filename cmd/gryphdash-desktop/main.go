@@ -81,10 +81,11 @@ func main() {
 		log.Printf("external provider catalog rejected: %v", catalogErr)
 	}
 	repositories := discoverDesktopProviderRepositories()
+	providerService := newDesktopProviderService(cfg, repositories)
 	collectorInstance := collector.New(collector.Options{Providers: providers})
 	serverRuntime, err := app.NewDesktop(app.Options{
 		Collector: collectorInstance,
-		Handler:   webhandler.NewHandlerWithCatalogAndRepositories(collectorInstance, webassets.FS, widgetCatalog, repositories),
+		Handler:   webhandler.NewHandlerWithCatalogAndRepositoriesAndService(collectorInstance, webassets.FS, widgetCatalog, repositories, providerService),
 		Address:   cfg.DesktopAddress,
 		Interval:  cfg.RefreshInterval,
 	})
@@ -147,7 +148,7 @@ func main() {
 	windowController := desktop.NewController(wailsWindow{}, settings.CloseToTray, desktop.Actions{
 		Refresh: func(context.Context) { refreshNow() },
 	})
-	desktopBridge := &DesktopBridge{controller: windowController, contextFn: contextFn, settingsPath: settingsPath, settings: settings, launchAtLogin: launchAtLogin}
+	desktopBridge := &DesktopBridge{controller: windowController, contextFn: contextFn, settingsPath: settingsPath, settings: settings, launchAtLogin: launchAtLogin, providerService: providerService}
 	notificationMonitor := desktop.NewNotificationMonitor(wailsNotifier{}, 30*time.Minute, 5*time.Minute, desktopBridge.NotificationPreferences, desktopBridge.NotificationScope)
 	go runTray(gryphDashIcon, windowController, contextFn, func() {})
 	nativeMenu := menu.NewMenu()
@@ -219,6 +220,18 @@ func main() {
 		log.Print(err)
 		os.Exit(1)
 	}
+}
+
+func newDesktopProviderService(cfg config.Config, repositories []providerrepo.Discovery) *providerrepo.Service {
+	settingsPath, err := providerrepo.SettingsPath("gryphdash")
+	if err != nil {
+		return nil
+	}
+	cacheDirectory := cfg.ProviderCacheDirectory
+	if cacheDirectory == "" {
+		cacheDirectory, _ = providerrepo.DefaultCacheDir("gryphdash")
+	}
+	return providerrepo.NewService(settingsPath, cacheDirectory, repositories)
 }
 
 func discoverDesktopProviderRepositories() []providerrepo.Discovery {

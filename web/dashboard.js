@@ -302,6 +302,40 @@
   $('close-picker').addEventListener('click', () => picker.close());
   picker.addEventListener('click', event => { if (event.target === picker) picker.close(); });
   $('widget-search').addEventListener('input', renderPicker);
+  const providerDialog = $('provider-management');
+  const providerList = $('provider-management-list');
+  async function providerRequest(method, body) {
+    const response = await fetch('/api/provider-repositories', {method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body), cache: 'no-store'});
+    if (!response.ok) throw new Error((await response.text()) || 'Provider request failed');
+    return response.json();
+  }
+  async function refreshProviderState() {
+    try {
+      const [repositories, statuses] = await Promise.all([fetch('/api/provider-repositories', {cache: 'no-store'}).then(r => r.json()), fetch('/api/provider-status', {cache: 'no-store'}).then(r => r.json())]);
+      providerList.replaceChildren();
+      for (const repository of repositories) {
+        const row = element('section', 'provider-row');
+        const details = element('div'); details.append(element('strong', '', repository.url));
+        const state = repository.error ? (repository.manifest ? 'stale' : 'unavailable') : (repository.enabled ? 'available' : 'disabled');
+        details.append(element('p', 'note', state + (repository.error ? `: ${repository.error}` : ''))); row.append(details);
+        const actions = element('div', 'provider-actions');
+        const statusRows = statuses.filter(status => status.repositoryUrl === repository.url);
+        for (const status of statusRows) {
+          const label = status.name + ' · ' + status.state + (status.installedVersion ? ` (${status.installedVersion})` : '');
+          const text = element('p', 'note', label); actions.append(text);
+          if (status.state === 'available' || status.state === 'update') { const button = element('button', '', status.state === 'update' ? 'Update' : 'Install'); button.onclick = async () => { button.disabled = true; try { await fetch('/api/provider-status', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({operation: status.state === 'update' ? 'update' : 'install', repositoryUrl: status.repositoryUrl, providerId: status.providerId})}); refreshProviderState(); } catch (error) { providerList.prepend(element('p', 'notice', error.message)); } }; actions.append(button); }
+        }
+        const toggle = element('button', '', repository.enabled ? 'Disable' : 'Enable'); toggle.onclick = async () => { await providerRequest('PATCH', {url: repository.url, enabled: !repository.enabled}); refreshProviderState(); }; actions.append(toggle);
+        const remove = element('button', '', 'Remove'); remove.onclick = async () => { if (confirm('Remove this repository configuration? Installed providers are retained.')) { await providerRequest('DELETE', {url: repository.url}); refreshProviderState(); } }; actions.append(remove);
+        row.append(actions); providerList.append(row);
+      }
+      if (!repositories.length) providerList.append(element('p', 'note', 'No repositories configured.'));
+    } catch (error) { providerList.replaceChildren(element('p', 'notice', 'Provider state unavailable: ' + error.message)); }
+  }
+  $('manage-providers').addEventListener('click', () => { providerDialog.showModal(); refreshProviderState(); });
+  $('close-provider-management').addEventListener('click', () => providerDialog.close());
+  $('add-provider-repository').addEventListener('click', async () => { const url = prompt('HTTPS repository manifest URL:'); if (!url) return; try { await providerRequest('POST', {url}); refreshProviderState(); } catch (error) { providerList.prepend(element('p', 'notice', error.message)); } });
+  providerDialog.addEventListener('click', event => { if (event.target === providerDialog) providerDialog.close(); });
   $('edit-layout').addEventListener('click', () => setEditing(!editing));
   $('save-layout').addEventListener('click', () => { const name = prompt('Name this layout:'); if (!name?.trim()) return; const items = grid.save(false, false, undefined, 12).map(({id, x, y, w, h}) => ({id, x: x ?? 0, y: y ?? 0, w: w ?? 4, h: h ?? 4})); const entry = {name: name.trim().slice(0, 100), items}; layoutStore.current = items; layoutStore.saved = layoutStore.saved.filter(item => item.name !== entry.name); layoutStore.saved.push(entry); try { activeLayoutName = entry.name; writeLayoutStore(); renderLayoutOptions(); $('layout-status').textContent = `Saved layout: ${entry.name}`; } catch (error) { $('layout-status').textContent = 'Browser storage unavailable; layout was not saved.'; } });
   function closeLayoutOptions(focusButton = false) {
