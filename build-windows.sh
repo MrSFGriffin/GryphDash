@@ -8,7 +8,8 @@ output_dir="$repo_root/bin"
 output_file="$output_dir/gryphdash-desktop-windows-amd64.exe"
 provider_repo="${GRYPHDASH_PROVIDERS_DIR:-$repo_root/../GryphDash-Providers}"
 if [[ ! -d "$provider_repo/cmd/gryphdash-provider-currency" ]]; then
-  provider_repo="$repo_root"
+  echo "GryphDash-Providers repository not found: $provider_repo" >&2
+  exit 1
 fi
 currency_output_file="$output_dir/gryphdash-provider-currency-windows-amd64.exe"
 codex_output_file="$output_dir/gryphdash-provider-codex-windows-amd64.exe"

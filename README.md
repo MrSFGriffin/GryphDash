@@ -17,14 +17,14 @@ codex login status
 go run . web
 ```
 
-For local development, `./run-web.sh` builds the subprocess providers and
-starts the web dashboard with them configured automatically.
+For local development, `./run-web.sh` builds the subprocess providers from the
+separate provider repository and starts the web dashboard with them configured
+automatically.
 
 The released core provider sources live in the sibling
-`~/src/GryphDash-Providers` repository. If that checkout exists, the helper
-scripts use it automatically; set `GRYPHDASH_PROVIDERS_DIR` to choose another
-checkout. When it is absent, they build the identical providers kept in this
-repository, which remains the offline development fallback:
+`~/src/GryphDash-Providers` repository. The helper scripts use it automatically;
+set `GRYPHDASH_PROVIDERS_DIR` to choose another checkout. The provider
+repository is required by the helper scripts:
 
 ```sh
 GRYPHDASH_PROVIDERS_DIR="$HOME/src/GryphDash-Providers" ./run-web.sh
@@ -119,7 +119,7 @@ IDs stable so saved browser and TUI layouts continue to work.
 
 For a new external service, such as a stock-price, music, or calendar service:
 
-1. Create a package directory such as `providers/<name>/`.
+1. Create a package directory such as `providers/<name>/` in the external provider repository.
 2. Add a provider executable under `cmd/` that supports `-widgets` and the
    line-delimited `read` protocol. The executable owns credentials, API calls,
    response parsing, source naming, and widget definitions.
@@ -131,7 +131,7 @@ For a new external service, such as a stock-price, music, or calendar service:
 5. Document required environment variables and run the standard Go checks.
 
 Provider API clients, normalization, widget definitions, and their tests belong
-under `providers/<name>/`. Application wiring only discovers generic provider
+in the external provider repository under `providers/<name>/`. Application wiring only discovers generic provider
 executables and passes their results to the collector. Do not add
 provider-specific fields, imports, response parsing, or source switches to
 `internal/collector`.
@@ -150,7 +150,7 @@ The first example provider reads Frankfurter exchange rates without an API key.
 Build it beside the main binary (the default discovery location):
 
 ```sh
-go build -o bin/gryphdash-provider-currency ./cmd/gryphdash-provider-currency
+go build -o bin/gryphdash-provider-currency ../GryphDash-Providers/cmd/gryphdash-provider-currency
 GRYPHDASH_PROVIDER_DIR="$PWD/bin" ./bin/gryphdash
 ```
 
@@ -163,7 +163,7 @@ generic subprocess protocol.
 Codex is also distributed as an external provider executable:
 
 ```sh
-go build -o bin/gryphdash-provider-codex ./cmd/gryphdash-provider-codex
+go build -o bin/gryphdash-provider-codex ../GryphDash-Providers/cmd/gryphdash-provider-codex
 ```
 
 The Windows build helper produces both provider executables alongside the
@@ -213,7 +213,7 @@ and [credits documentation](https://openrouter.ai/docs/api/api-reference/credits
 | `GRYPHDASH_DESKTOP_ADDR` | `127.0.0.1:8081` | Desktop HTTP listen address; must remain loopback-only |
 | `GRYPHDASH_CODEX_BIN` | `codex` | CLI executable name or full path (not shell arguments) |
 | `GRYPHDASH_PROVIDER_DIR` | executable directory or `./bin` | Directory containing `gryphdash-provider-*` external provider executables |
-| `GRYPHDASH_PROVIDER_CACHE` | OS cache (`gryphdash/providers`) | Managed provider cache; managed executables take precedence over local providers with the same name |
+| `GRYPHDASH_PROVIDER_CACHE` | OS cache (`gryphdash/providers`) | Managed provider cache; managed executables take precedence over externally configured local providers with the same name |
 | `GRYPHDASH_REFRESH_INTERVAL` | `1m` | Delay after each polling cycle; minimum `30s` |
 | `OPENROUTER_API_KEY` | unset | Bearer key for OpenRouter key usage and credits requests |
 

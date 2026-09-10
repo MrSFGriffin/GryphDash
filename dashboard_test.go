@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
-	openrouterprovider "gryphdash/providers/openrouter"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -15,12 +13,44 @@ import (
 	collectorpkg "gryphdash/internal/collector"
 	dashboardpkg "gryphdash/internal/dashboard"
 	"gryphdash/internal/providerrepo"
-	codexprovider "gryphdash/providers/codex"
 )
 
 func testCatalog(t *testing.T) widgetCatalog {
 	t.Helper()
-	catalog, err := dashboardpkg.MergeCatalog(dashboardpkg.WidgetCatalog{}, codexprovider.Catalog(), openrouterprovider.Catalog())
+	widgets := make([]dashboardpkg.WidgetConfig, 0, 30)
+	for _, entry := range []struct {
+		id, name, path, kind string
+		defaultWidget        bool
+	}{
+		{"codex/bucket/{bucket}/primary", "Primary limit", "primary", "limitWindow", true},
+		{"codex/bucket/{bucket}/secondary", "Secondary limit", "secondary", "limitWindow", true},
+		{"codex/bucket/{bucket}/credits/balance", "Credits remaining", "credits.balance", "scalar", true},
+		{"codex/bucket/{bucket}/credits/hasCredits", "Credits available", "credits.hasCredits", "scalar", false},
+		{"codex/bucket/{bucket}/planType", "Bucket plan", "planType", "scalar", false},
+	} {
+		widgets = append(widgets, dashboardpkg.WidgetConfig{ID: entry.id, Group: "Codex", Name: entry.name, Description: "Test widget", Scope: "limitBuckets", Default: entry.defaultWidget, Width: 4, Height: 4, Logic: dashboardpkg.WidgetLogic{Type: entry.kind, Source: "codex/limits", Path: entry.path}})
+	}
+	for _, entry := range []struct {
+		id, name, source, path, kind string
+		defaultWidget                bool
+	}{
+		{"codex/resets/count", "Available resets", "codex/limits", "rateLimitResetCredits.availableCount", "scalar", true},
+		{"codex/resets/details", "Earned reset details", "codex/limits", "rateLimitResetCredits", "resetDetails", false},
+		{"codex/usage/lifetimeTokens", "Lifetime tokens", "codex/usage", "summary.lifetimeTokens", "scalar", true},
+		{"codex/usage/currentStreakDays", "Current streak", "codex/usage", "summary.currentStreakDays", "scalar", true},
+		{"codex/usage/longestStreakDays", "Longest streak", "codex/usage", "summary.longestStreakDays", "scalar", false},
+		{"codex/usage/daily", "Daily token activity", "codex/usage", "dailyUsageBuckets", "daily", true},
+		{"codex/account/plan", "Account plan", "codex/account", "account.planType", "scalar", true},
+	} {
+		widgets = append(widgets, dashboardpkg.WidgetConfig{ID: entry.id, Group: "Codex", Name: entry.name, Description: "Test widget", Default: entry.defaultWidget, Width: 4, Height: 4, Logic: dashboardpkg.WidgetLogic{Type: entry.kind, Source: entry.source, Path: entry.path}})
+	}
+	for i := 0; i < 9; i++ {
+		widgets = append(widgets, dashboardpkg.WidgetConfig{ID: fmt.Sprintf("codex/test/%d", i), Group: "Codex", Name: fmt.Sprintf("Codex test %d", i), Description: "Test widget", Width: 4, Height: 4, Logic: dashboardpkg.WidgetLogic{Type: "scalar", Source: "codex/test", Path: fmt.Sprintf("value%d", i)}})
+	}
+	for i := 0; i < 9; i++ {
+		widgets = append(widgets, dashboardpkg.WidgetConfig{ID: fmt.Sprintf("openrouter/test/%d", i), Group: "OpenRouter", Name: fmt.Sprintf("OpenRouter test %d", i), Description: "Test widget", Width: 4, Height: 4, Logic: dashboardpkg.WidgetLogic{Type: "scalar", Source: "openrouter/key", Path: fmt.Sprintf("value%d", i), URL: "https://openrouter.ai/api/v1/key", Method: "GET"}})
+	}
+	catalog, err := dashboardpkg.MergeCatalog(dashboardpkg.WidgetCatalog{}, dashboardpkg.WidgetCatalog{Widgets: widgets})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,6 +65,14 @@ func fixture(t *testing.T, raw string) map[string]any {
 	}
 	return m
 }
+
+type testReader struct {
+	name string
+	read func(context.Context) map[string]result
+}
+
+func (r testReader) Name() string                               { return r.name }
+func (r testReader) Read(ctx context.Context) map[string]result { return r.read(ctx) }
 
 func TestProviderRepositoryMetadataAPI(t *testing.T) {
 	c := collectorpkg.New(collectorpkg.Options{})
@@ -203,30 +241,19 @@ func TestFailureRetainsSnapshot(t *testing.T) {
 }
 
 func TestCollectorPartialFailure(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "fake-codex")
-	script := `#!/bin/sh
-while IFS= read -r line; do
- case "$line" in
-  *'"method":"initialize"'*) echo '{"id":1,"result":{}}' ;;
-  *'"method":"account/read"'*) echo '{"id":2,"result":{"account":{"type":"chatgpt","planType":"plus"}}}' ;;
-  *'"method":"account/rateLimits/read"'*) echo '{"id":3,"result":{"rateLimits":{"credits":{"balance":"0"}}}}' ;;
-  *'"method":"account/usage/read"'*) echo '{"id":4,"error":{"code":-32601,"message":"unsupported"}}' ;;
- esac
-done
-`
-	if err := os.WriteFile(path, []byte(script), 0700); err != nil {
-		t.Fatal(err)
-	}
-	openRouter := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":{"usage_monthly":7}}`))
-	}))
-	defer openRouter.Close()
-	previousBase := openrouterprovider.BaseURLOverride
-	openrouterprovider.BaseURLOverride = openRouter.URL
-	defer func() { openrouterprovider.BaseURLOverride = previousBase }()
 	old := time.Now().Add(-time.Hour)
-	c := collectorpkg.New(collectorpkg.Options{Providers: []collectorpkg.Reader{codexprovider.NewAdapter(path), openrouterprovider.NewAdapter("test-key", openRouter.Client())}})
+	c := collectorpkg.New(collectorpkg.Options{Providers: []collectorpkg.Reader{
+		testReader{name: "codex", read: func(context.Context) map[string]result {
+			return map[string]result{
+				"codex/account": {Data: map[string]any{"type": "chatgpt"}, Updated: time.Now()},
+				"codex/limits":  {Data: map[string]any{"credits": map[string]any{"balance": "0"}}, Updated: time.Now()},
+				"codex/usage":   {Error: "unsupported"},
+			}
+		}},
+		testReader{name: "openrouter", read: func(context.Context) map[string]result {
+			return map[string]result{"openrouter/key": {Data: map[string]any{"usage_monthly": float64(7)}, Updated: time.Now()}}
+		}},
+	}})
 	c.SetSnapshot(snapshot{Results: map[string]result{"codex/usage": {Data: map[string]any{"old": true}, Updated: old}}})
 	c.Refresh(context.Background())
 	s := c.Snapshot()
@@ -243,11 +270,10 @@ done
 	}
 }
 func TestCollectorCancellation(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "fake-codex")
-	if err := os.WriteFile(path, []byte("#!/bin/sh\nwhile IFS= read -r line; do :; done\n"), 0700); err != nil {
-		t.Fatal(err)
-	}
-	c := collectorpkg.New(collectorpkg.Options{Providers: []collectorpkg.Reader{codexprovider.NewAdapter(path)}})
+	c := collectorpkg.New(collectorpkg.Options{Providers: []collectorpkg.Reader{testReader{name: "cancel", read: func(ctx context.Context) map[string]result {
+		<-ctx.Done()
+		return map[string]result{"cancel/status": {Error: ctx.Err().Error()}}
+	}}}})
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	start := time.Now()
@@ -255,7 +281,7 @@ func TestCollectorCancellation(t *testing.T) {
 	if time.Since(start) > 3*time.Second {
 		t.Fatal("child process did not stop on cancellation")
 	}
-	if c.Snapshot().Results["codex/limits"].Error == "" {
+	if c.Snapshot().Results["cancel/status"].Error == "" {
 		t.Fatal("cancellation not reported")
 	}
 }

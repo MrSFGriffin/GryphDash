@@ -65,9 +65,7 @@ git clone https://github.com/MrSFGriffin/GryphDash-Providers ~/src/GryphDash-Pro
 GRYPHDASH_PROVIDERS_DIR="$HOME/src/GryphDash-Providers" ./run-web.sh
 ```
 
-The helper scripts automatically use that sibling checkout when present. If it
-is unavailable, they build the identical providers retained in GryphDash as an
-offline development fallback. The provider repository's `build-release.sh`
+The helper scripts require that provider checkout. The provider repository's `build-release.sh`
 cross-compiles the Codex, Currency, and OpenRouter executables and writes
 `SHA256SUMS` for publishing.
 
@@ -90,6 +88,6 @@ provider lifecycle actions/status at `/api/provider-status`. The desktop bridge
 and TUI expose the same operations. Unavailable repositories are shown as
 `unavailable`; known metadata retained through an outage is shown as `stale`.
 
-Managed providers take precedence over local executables with the same provider
-ID. If no managed copy is installed, GryphDash falls back to executables beside
-the application, in `./bin`, or in `GRYPHDASH_PROVIDER_DIR`.
+Managed providers take precedence over explicitly configured external local
+executables with the same provider ID. GryphDash discovers local executables
+only from `GRYPHDASH_PROVIDER_DIR` or the standard executable directories.

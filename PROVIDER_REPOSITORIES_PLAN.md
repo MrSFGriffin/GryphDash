@@ -2,7 +2,7 @@
 
 ## Summary
 
-Add support for discovering and installing providers from separate HTTPS-hosted provider repositories while keeping the current in-repo providers working as a fallback.
+Add support for discovering and installing providers from separate HTTPS-hosted provider repositories.
 
 Repositories are explicitly trusted by the user. There will be no publisher-signature or central-approval system in v1.
 
@@ -33,9 +33,9 @@ Repositories are explicitly trusted by the user. There will be no publisher-sign
 ## Discovery and compatibility
 
 - Extend provider discovery to include the managed provider cache.
-- Keep the existing in-repository provider executables and source/build workflow functional as fallback.
-- Prefer an installed managed provider over an in-repo provider with the same provider name.
-- Use the in-repo provider when no managed provider for that name is installed.
+- Use only provider executables discovered from the managed cache or an explicitly configured external provider directory.
+- Prefer an installed managed provider over an explicitly configured external local provider with the same provider name.
+- Use an external local provider when no managed provider for that name is installed.
 - Reject duplicate provider names from competing configured repositories unless they represent the same installed source/version.
 - Continue rejecting duplicate widget IDs and invalid catalogs.
 - Keep the existing subprocess protocol, timeout, stderr capture, environment handling, and process cleanup.
@@ -46,12 +46,7 @@ Create a separate repository for the core provider implementations and release a
 
 For local development, place that repository at `~/src/GryphDash-Providers`.
 
-The dashboard repository will continue to contain the current providers during this transition, so local development and existing builds remain usable if the external core repository is unavailable.
-
-Update the build scripts and documentation to explain both paths:
-
-- local in-repo providers for development/fallback;
-- repository-installed providers for normal distribution and additional third-party providers.
+Update the build scripts and documentation to require the external provider repository for local provider builds.
 
 ## Testing and acceptance criteria
 
@@ -61,9 +56,9 @@ Update the build scripts and documentation to explain both paths:
 - Atomic-install and cache-recovery tests.
 - Repository configuration persistence tests.
 - Tests proving metadata discovery does not download or execute binaries.
-- Tests for explicit install, update, removal, repository outage, and local-provider fallback.
+- Tests for explicit install, update, removal, and repository outage.
 - Tests for provider-name and widget-ID conflicts.
-- Existing subprocess and provider fixture tests remain passing.
+- Existing subprocess fixture tests remain passing.
 - Run Go formatting, tests, vet, build, race tests, JavaScript checks, shell syntax checks, and `git diff --check`.
 
 ## Assumptions
@@ -73,4 +68,4 @@ Update the build scripts and documentation to explain both paths:
 - SHA-256 is an integrity check only.
 - Installation is always explicit.
 - All three interfaces support repository management and installation.
-- Existing in-repo providers remain available throughout this implementation.
+- Provider implementations and releases live in the separate provider repository.

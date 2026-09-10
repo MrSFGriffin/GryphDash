@@ -93,11 +93,11 @@ cmd/gryphdash/
 cmd/gryphdash-relay/
 internal/protocol/
 internal/storage/
-providers/
+external provider executables/
 ```
 
-The existing `providers/` packages remain local-only. The relay must not import
-provider clients or receive provider credentials.
+Provider clients remain outside the relay. The relay must not import provider
+clients or receive provider credentials.
 
 The local application gains:
 

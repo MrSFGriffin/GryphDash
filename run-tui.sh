@@ -6,7 +6,8 @@ repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 output_dir="$repo_root/bin"
 provider_repo="${GRYPHDASH_PROVIDERS_DIR:-$repo_root/../GryphDash-Providers}"
 if [[ ! -d "$provider_repo/cmd/gryphdash-provider-currency" ]]; then
-  provider_repo="$repo_root"
+  echo "GryphDash-Providers repository not found: $provider_repo" >&2
+  exit 1
 fi
 
 mkdir -p "$output_dir"
