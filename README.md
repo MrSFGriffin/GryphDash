@@ -115,24 +115,48 @@ activity, `resetDetails` for reset lists, and `limitWindow` for a limit bucket.
 The `source` and `path` must match data returned by the provider adapter. Keep
 IDs stable so saved browser and TUI layouts continue to work.
 
-### Adding a new provider
+### Adding provider repositories and providers
 
-For a new external service, such as a stock-price, music, or calendar service:
+GryphDash gets providers from provider repositories. A repository is an HTTPS
+URL serving a `repository.json` index. The index describes one or more providers,
+their widget catalogs, and checksummed binaries for each supported platform.
 
-1. Create a package directory such as `providers/<name>/` in the external provider repository.
-2. Add a provider executable under `cmd/` that supports `-widgets` and the
-   line-delimited `read` protocol. The executable owns credentials, API calls,
-   response parsing, source naming, and widget definitions.
-3. Add provider tests using an `httptest` fixture. Cover
-   successful responses, authentication failures, malformed responses, and any
-   provider-specific limits. Tests must never call the live service.
-4. Build the executable as `gryphdash-provider-<name>` and put it beside
-   GryphDash or in the directory named by `GRYPHDASH_PROVIDER_DIR`.
+The built-in core repository is [GryphDash-Providers](https://github.com/MrSFGriffin/GryphDash-Providers).
+It contains the Codex, Currency, and OpenRouter providers. GryphDash configures
+this repository automatically; it cannot be removed from the application.
+
+To add another repository in the web dashboard:
+
+1. Open **Providers**.
+2. Click **Add repository**.
+3. Enter the repository's HTTPS `repository.json` URL.
+4. Review the providers that the repository publishes.
+5. Click **Install** next to each provider you want to use.
+
+Adding a repository only fetches its metadata. A provider binary is downloaded,
+checksum-verified, and installed only after you explicitly click **Install**.
+Installed providers can be updated or uninstalled from the same dialog. Removing
+a repository removes its configuration but does not remove providers already
+installed from it; uninstall those providers separately.
+
+To publish a new provider, work in a provider repository such as
+[GryphDash-Providers](https://github.com/MrSFGriffin/GryphDash-Providers):
+
+1. Add a package under `providers/<name>/` and a command under
+   `cmd/gryphdash-provider-<name>`.
+2. Make the executable support `-widgets` and GryphDash's line-delimited
+   `read` protocol. It owns credentials, API calls, response parsing, source
+   naming, and widget definitions.
+3. Add fixture-based tests for successful responses, authentication failures,
+   malformed responses, and provider-specific limits. Tests must not call the
+   live service.
+4. Add the provider's platform artifacts and checksums to the repository's
+   `repository.json` release index.
 5. Document required environment variables and run the standard Go checks.
 
-Provider API clients, normalization, widget definitions, and their tests belong
-in the external provider repository under `providers/<name>/`. Application wiring only discovers generic provider
-executables and passes their results to the collector. Do not add
+Provider API clients, normalization, widget definitions, tests, and release
+artifacts belong in the provider repository. GryphDash only discovers generic
+provider executables and passes their results to the collector; do not add
 provider-specific fields, imports, response parsing, or source switches to
 `internal/collector`.
 
