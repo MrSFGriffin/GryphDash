@@ -153,11 +153,7 @@ func (s *Service) RemoveRepository(rawURL string) ([]Discovery, error) {
 }
 
 func (s *Service) Statuses() []ProviderStatus {
-	installed, _ := DiscoverInstalled(s.manager.Root)
-	byProvider := make(map[string]InstalledProvider, len(installed))
-	for _, item := range installed {
-		byProvider[item.ProviderID] = item
-	}
+	installedProviders, installedErr := DiscoverInstalled(s.manager.Root)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	statuses := []ProviderStatus{}
@@ -171,12 +167,24 @@ func (s *Service) Statuses() []ProviderStatus {
 				status.Error = repository.Error
 				status.State = StateStale
 			}
-			if item, ok := byProvider[provider.ID]; ok && strings.Contains(item.Path, string(os.PathSeparator)+repositoryKey(repository.URL)+string(os.PathSeparator)) {
-				status.InstalledVersion = item.Version
-				if item.Version == provider.Version {
-					status.State = StateInstalled
-				} else {
-					status.State = StateUpdate
+			manifest := Manifest{Version: ManifestVersion, Repository: *repository.Repository, Provider: provider}
+			installed, err := s.manager.IsInstalled(repository.URL, manifest, runtime.GOOS, runtime.GOARCH)
+			if err != nil {
+				status.Error = fmt.Sprintf("inspect installed provider: %v", err)
+				status.State = StateError
+			} else if installed {
+				status.InstalledVersion = provider.Version
+				status.State = StateInstalled
+			} else if installedErr != nil {
+				status.Error = fmt.Sprintf("inspect installed providers: %v", installedErr)
+				status.State = StateError
+			} else {
+				for _, item := range installedProviders {
+					if item.ProviderID == provider.ID && strings.Contains(item.Path, string(os.PathSeparator)+repositoryKey(repository.URL)+string(os.PathSeparator)) {
+						status.InstalledVersion = item.Version
+						status.State = StateUpdate
+						break
+					}
 				}
 			}
 			if s.installing[provider.ID] {

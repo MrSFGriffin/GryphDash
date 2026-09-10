@@ -89,6 +89,31 @@ func TestServiceInstallUsesManagedCacheAndReportsInstalling(t *testing.T) {
 	}
 }
 
+func TestServiceReportsTheExactRepositoryInstall(t *testing.T) {
+	payload := []byte("#!/bin/sh\nexit 0\n")
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write(payload) }))
+	defer server.Close()
+	manifest := installManifest(server.URL+"/provider", payload, "1.0.0")
+	repositoryURL := "https://example.test/repository.json"
+	service := NewService(filepath.Join(t.TempDir(), "repositories.json"), t.TempDir(), []Discovery{discoveryForManifest(repositoryURL, manifest)})
+	service.manager.HTTPClient = TLSClient(&tls.Config{RootCAs: serverCertPool(t, server)})
+
+	if _, err := service.manager.Install(context.Background(), repositoryURL, manifest, runtime.GOOS, runtime.GOARCH); err != nil {
+		t.Fatal(err)
+	}
+	// A stale install with the same provider ID must not hide the exact
+	// repository artifact that the status row represents.
+	otherRepositoryURL := "https://other.example/repository.json"
+	if _, err := service.manager.Install(context.Background(), otherRepositoryURL, manifest, runtime.GOOS, runtime.GOARCH); err != nil {
+		t.Fatal(err)
+	}
+
+	statuses := service.Statuses()
+	if len(statuses) != 1 || statuses[0].State != StateInstalled || statuses[0].InstalledVersion != manifest.Provider.Version {
+		t.Fatalf("statuses = %+v", statuses)
+	}
+}
+
 func discoveryForManifest(url string, manifest Manifest) Discovery {
 	repository := manifest.Repository
 	return Discovery{URL: url, Enabled: true, Available: true, Repository: &repository, Providers: []Provider{manifest.Provider}}

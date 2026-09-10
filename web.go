@@ -46,6 +46,7 @@ func runWeb(ctx context.Context) error {
 			catalogMu.Lock()
 			catalog = refreshedCatalog
 			catalogMu.Unlock()
+			c.Refresh(context.Background())
 		})
 	}
 	runtime, err := app.New(app.Options{

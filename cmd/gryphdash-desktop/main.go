@@ -97,6 +97,7 @@ func main() {
 			catalogMu.Lock()
 			widgetCatalog = refreshedCatalog
 			catalogMu.Unlock()
+			collectorInstance.Refresh(context.Background())
 		})
 	}
 	serverRuntime, err := app.NewDesktop(app.Options{
