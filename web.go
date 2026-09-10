@@ -36,7 +36,7 @@ func runWeb(ctx context.Context) error {
 	service := newProviderService(cfg, repositories)
 	var catalogMu sync.RWMutex
 	if service != nil {
-		service.SetInstallCallback(func() {
+		service.SetProviderChangeCallback(func() {
 			external, refreshedCatalog := discoverExternalProviders(cfg)
 			readers := make([]collectorpkg.Reader, 0, len(external))
 			for _, provider := range external {

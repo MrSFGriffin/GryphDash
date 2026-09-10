@@ -39,25 +39,25 @@ type ProviderStatus struct {
 // operation that downloads and executes no code (execution happens later via
 // normal subprocess discovery).
 type Service struct {
-	settingsPath  string
-	manager       Manager
-	mu            sync.RWMutex
-	discoveries   []Discovery
-	installing    map[string]bool
-	installErrors map[string]string
-	onInstall     func()
+	settingsPath     string
+	manager          Manager
+	mu               sync.RWMutex
+	discoveries      []Discovery
+	installing       map[string]bool
+	installErrors    map[string]string
+	onProviderChange func()
 }
 
 func NewService(settingsPath, cacheRoot string, discoveries []Discovery) *Service {
 	return &Service{settingsPath: settingsPath, manager: NewManager(cacheRoot, nil), discoveries: append([]Discovery(nil), discoveries...), installing: map[string]bool{}, installErrors: map[string]string{}}
 }
 
-// SetInstallCallback registers a callback invoked after an install or update
-// finishes successfully. It is used by application runtimes to reload the
-// newly installed provider without restarting.
-func (s *Service) SetInstallCallback(callback func()) {
+// SetProviderChangeCallback registers a callback invoked after a provider is
+// installed, updated, or removed successfully. It is used by application
+// runtimes to rebuild the provider catalog without restarting.
+func (s *Service) SetProviderChangeCallback(callback func()) {
 	s.mu.Lock()
-	s.onInstall = callback
+	s.onProviderChange = callback
 	s.mu.Unlock()
 }
 
@@ -229,7 +229,7 @@ func (s *Service) lifecycle(ctx context.Context, repositoryURL, providerID strin
 				s.discoveries[i].Error = err.Error()
 			}
 		}
-		callback := s.onInstall
+		callback := s.onProviderChange
 		s.mu.Unlock()
 		if err == nil && callback != nil {
 			callback()
@@ -269,5 +269,14 @@ func (s *Service) RemoveProvider(repositoryURL, providerID, version string) erro
 	if repositoryID == "" {
 		return fmt.Errorf("provider %q is unavailable in repository %q", providerID, repositoryURL)
 	}
-	return s.manager.Remove(repositoryURL, repositoryID, providerID, version, runtime.GOOS, runtime.GOARCH)
+	if err := s.manager.Remove(repositoryURL, repositoryID, providerID, version, runtime.GOOS, runtime.GOARCH); err != nil {
+		return err
+	}
+	s.mu.RLock()
+	callback := s.onProviderChange
+	s.mu.RUnlock()
+	if callback != nil {
+		callback()
+	}
+	return nil
 }

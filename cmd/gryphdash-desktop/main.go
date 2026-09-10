@@ -87,7 +87,7 @@ func main() {
 	collectorInstance := collector.New(collector.Options{Providers: providers})
 	var catalogMu sync.RWMutex
 	if providerService != nil {
-		providerService.SetInstallCallback(func() {
+		providerService.SetProviderChangeCallback(func() {
 			external, refreshedCatalog := discoverDesktopExternalProviders(cfg)
 			readers := make([]collector.Reader, 0, len(external))
 			for _, provider := range external {
