@@ -51,7 +51,21 @@
   else { const match = layoutStore.saved.find(item => layoutSignature(item.items) === layoutSignature(savedLayout)); if (match) activeLayoutName = match.name; }
   function layoutSignature(items) { return JSON.stringify(items.map(({id, x, y, w, h}) => ({id, x, y, w, h})).sort((a, b) => a.id.localeCompare(b.id))); }
   function writeLayoutStore() { localStorage.setItem(STORAGE_KEY, JSON.stringify({version: 1, items: layoutStore.current || []})); localStorage.setItem(NAMED_LAYOUTS_KEY, JSON.stringify({version: 1, active: activeLayoutName, saved: layoutStore.saved})); }
-  function renderLayoutOptions() { const select = $('layout-select'); select.replaceChildren(element('option', '', 'Default')); for (const item of layoutStore.saved) select.append(element('option', '', item.name)); if (![...select.options].some(option => option.value === activeLayoutName)) select.append(element('option', '', activeLayoutName)); select.disabled = !ready; select.value = activeLayoutName; }
+  function renderLayoutOptions() {
+    const select = $('layout-select');
+    const options = $('layout-options');
+    options.replaceChildren();
+    const names = ['Default', ...layoutStore.saved.map(item => item.name)];
+    if (!names.includes(activeLayoutName)) names.push(activeLayoutName);
+    for (const name of names) {
+      const option = element('button', 'layout-option', name);
+      option.type = 'button'; option.setAttribute('role', 'option'); option.dataset.value = name;
+      option.setAttribute('aria-selected', String(name === activeLayoutName));
+      options.append(option);
+    }
+    select.textContent = activeLayoutName;
+    select.disabled = !ready;
+  }
   function saveLayout() {
     if (!ready || restoring) return;
     try {
@@ -257,7 +271,40 @@
   $('widget-search').addEventListener('input', renderPicker);
   $('edit-layout').addEventListener('click', () => setEditing(!editing));
   $('save-layout').addEventListener('click', () => { const name = prompt('Name this layout:'); if (!name?.trim()) return; const items = grid.save(false, false, undefined, 12).map(({id, x, y, w, h}) => ({id, x: x ?? 0, y: y ?? 0, w: w ?? 4, h: h ?? 4})); const entry = {name: name.trim().slice(0, 100), items}; layoutStore.current = items; layoutStore.saved = layoutStore.saved.filter(item => item.name !== entry.name); layoutStore.saved.push(entry); try { activeLayoutName = entry.name; writeLayoutStore(); renderLayoutOptions(); $('layout-status').textContent = `Saved layout: ${entry.name}`; } catch (error) { $('layout-status').textContent = 'Browser storage unavailable; layout was not saved.'; } });
-  $('layout-select').addEventListener('change', event => { const name = event.target.value; const entry = name === 'Default' ? null : layoutStore.saved.find(item => item.name === name); if (name !== 'Default' && !entry) return; restoring = true; grid.removeAll(); grid.batchUpdate(); if (entry) { for (const item of entry.items) addWidget(item.id, item); } else loadDefaults(); grid.batchUpdate(false); restoring = false; activeLayoutName = name; saveLayout(); emptyState(); updateCountdowns(); renderLayoutOptions(); });
+  function closeLayoutOptions(focusButton = false) {
+    $('layout-options').hidden = true;
+    $('layout-select').setAttribute('aria-expanded', 'false');
+    if (focusButton) $('layout-select').focus();
+  }
+  function openLayoutOptions(focusSelected = false) {
+    if ($('layout-select').disabled) return;
+    const options = $('layout-options');
+    options.hidden = false;
+    $('layout-select').setAttribute('aria-expanded', 'true');
+    if (focusSelected) options.querySelector('[aria-selected="true"]')?.focus();
+  }
+  function selectLayout(name) {
+    const entry = name === 'Default' ? null : layoutStore.saved.find(item => item.name === name);
+    if (name !== 'Default' && !entry) return;
+    closeLayoutOptions(); restoring = true; grid.removeAll(); grid.batchUpdate(); if (entry) { for (const item of entry.items) addWidget(item.id, item); } else loadDefaults(); grid.batchUpdate(false); restoring = false; activeLayoutName = name; saveLayout(); emptyState(); updateCountdowns(); renderLayoutOptions(); $('layout-select').focus();
+  }
+  $('layout-select').addEventListener('click', () => { if ($('layout-options').hidden) openLayoutOptions(); else closeLayoutOptions(); });
+  $('layout-select').addEventListener('keydown', event => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); openLayoutOptions(true); }
+    else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if ($('layout-options').hidden) openLayoutOptions(); else closeLayoutOptions(); }
+    else if (event.key === 'Escape') closeLayoutOptions();
+  });
+  $('layout-options').addEventListener('click', event => { const option = event.target.closest('[data-value]'); if (option) selectLayout(option.dataset.value); });
+  $('layout-options').addEventListener('keydown', event => {
+    const options = [...$('layout-options').querySelectorAll('[role="option"]')];
+    const index = options.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); options[(index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length]?.focus(); }
+    else if (event.key === 'Home') { event.preventDefault(); options[0]?.focus(); }
+    else if (event.key === 'End') { event.preventDefault(); options.at(-1)?.focus(); }
+    else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (document.activeElement?.dataset.value) selectLayout(document.activeElement.dataset.value); }
+    else if (event.key === 'Escape') closeLayoutOptions(true);
+  });
+  document.addEventListener('click', event => { if (!event.target.closest('.layout-picker')) closeLayoutOptions(); });
   function updateCountdowns() {
     document.querySelectorAll('[data-resets-at]').forEach(el => {
       const seconds = Math.max(0, Math.ceil(Number(el.dataset.resetsAt) - Date.now() / 1000));

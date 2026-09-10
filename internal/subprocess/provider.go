@@ -37,18 +37,40 @@ func New(name, executable string, args ...string) Provider {
 // gryphdash-provider-<name> convention. When directory is empty, the directory
 // containing the running executable is searched.
 func Discover(directory string) ([]Provider, error) {
-	if directory == "" {
-		executable, err := os.Executable()
-		if err != nil {
-			return nil, nil
-		}
-		directory = filepath.Dir(executable)
+	if directory != "" {
+		return discoverDirectory(directory)
 	}
+	directories := make([]string, 0, 2)
+	if executable, err := os.Executable(); err == nil {
+		directories = append(directories, filepath.Dir(executable))
+	}
+	if working, err := os.Getwd(); err == nil {
+		directories = append(directories, filepath.Join(working, "bin"))
+	}
+	seenDirectories := map[string]bool{}
+	providers := []Provider{}
+	for _, candidate := range directories {
+		if seenDirectories[candidate] {
+			continue
+		}
+		seenDirectories[candidate] = true
+		found, err := discoverDirectory(candidate)
+		if err != nil {
+			continue
+		}
+		providers = append(providers, found...)
+	}
+	sort.Slice(providers, func(i, j int) bool { return providers[i].Name() < providers[j].Name() })
+	return providers, nil
+}
+
+func discoverDirectory(directory string) ([]Provider, error) {
 	entries, err := os.ReadDir(directory)
 	if err != nil {
 		return nil, err
 	}
 	providers := make([]Provider, 0, len(entries))
+	seen := make(map[string]bool, len(entries))
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -64,6 +86,13 @@ func Discover(directory string) ([]Provider, error) {
 		if name == "" {
 			continue
 		}
+		// A development bin directory can contain both an un-suffixed local
+		// build and a platform-specific release build. Keep the first match so
+		// they cannot produce duplicate provider catalogs.
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
 		providers = append(providers, New(name, filepath.Join(directory, entry.Name())))
 	}
 	sort.Slice(providers, func(i, j int) bool { return providers[i].Name() < providers[j].Name() })

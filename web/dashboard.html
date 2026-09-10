@@ -18,7 +18,7 @@
         <button id="edit-layout" aria-pressed="false" disabled>Edit dashboard</button>
         <button id="save-layout" disabled>Create named layout</button>
         <button id="native-refresh" hidden>Refresh now</button>
-        <label class="layout-label" for="layout-select">Layout</label><select id="layout-select" aria-label="Layout" disabled></select>
+        <label class="layout-label" for="layout-select">Layout</label><div class="layout-picker"><button id="layout-select" type="button" aria-haspopup="listbox" aria-expanded="false" disabled>Default</button><div id="layout-options" class="layout-options" role="listbox" aria-label="Layout" hidden></div></div>
       </nav>
     </header>
     <div class="status-line"><p id="connection-status" role="status">Connecting to your Codex metrics…</p><p id="last-refresh">Last refresh: waiting for first refresh…</p><p id="layout-status">Layout saved in this browser</p></div>

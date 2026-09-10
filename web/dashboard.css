@@ -65,7 +65,12 @@ input { width: 100%; background: #10151e; border: 1px solid #445166; border-radi
 .picker-tab:hover { color: #eafff6; background: #203c35; }
 .picker-row { border-bottom: 1px solid #303b4b; padding: 12px 0; }
 .picker-row p { margin: 0; overflow-wrap: anywhere; } .picker-row button { flex-shrink: 0; }
+.layout-picker { position: relative; }
 #layout-select { background: #182235; border: 1px solid #40506a; border-radius: 7px; color: #dce7f5; padding: 9px 10px; }
+.layout-options { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; min-width: 100%; padding: 4px; border: 1px solid #40506a; border-radius: 7px; background: #182235; box-shadow: 0 8px 20px #060a1266; }
+.layout-option { display: block; width: 100%; border: 0; border-radius: 4px; background: #182235; color: #dce7f5; padding: 8px 10px; text-align: left; white-space: nowrap; }
+.layout-option[aria-selected="true"] { background: #dce7f5; color: #182235; }
+.layout-option:hover, .layout-option:focus-visible { background: #40506a; color: #f2f7ff; }
 .layout-label { color: #a7b3c6; font-size: .8rem; margin-left: 4px; }
 fieldset { border: 1px solid #303b4b; border-radius: 12px; margin: 0 0 18px; padding: 14px 16px; }
 legend { color: #a6e4cc; padding: 0 8px; }

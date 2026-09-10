@@ -18,6 +18,9 @@ codex login status
 go run . web
 ```
 
+For local development, `./run-web.sh` builds the subprocess providers and
+starts the web dashboard with them configured automatically.
+
 An existing ChatGPT login can be reused. No API key or token environment variable
 is needed. Codex manages its own credentials; do not copy `auth.json` into this
 repository. An API-key-only login does not provide these subscription metrics.
@@ -200,7 +203,7 @@ and [credits documentation](https://openrouter.ai/docs/api/api-reference/credits
 | `GRYPHDASH_ADDR` | `127.0.0.1:8080` | HTTP listen address |
 | `GRYPHDASH_DESKTOP_ADDR` | `127.0.0.1:8081` | Desktop HTTP listen address; must remain loopback-only |
 | `GRYPHDASH_CODEX_BIN` | `codex` | CLI executable name or full path (not shell arguments) |
-| `GRYPHDASH_PROVIDER_DIR` | executable directory | Directory containing `gryphdash-provider-*` external provider executables |
+| `GRYPHDASH_PROVIDER_DIR` | executable directory or `./bin` | Directory containing `gryphdash-provider-*` external provider executables |
 | `GRYPHDASH_REFRESH_INTERVAL` | `1m` | Delay after each polling cycle; minimum `30s` |
 | `OPENROUTER_API_KEY` | unset | Bearer key for OpenRouter key usage and credits requests |
 
