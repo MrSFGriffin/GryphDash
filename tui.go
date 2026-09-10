@@ -373,26 +373,13 @@ func abs(n int) int {
 type tuiPosition struct{ x, y int }
 
 func (m tuiModel) positions() map[string]tuiPosition {
-	groups := map[string][]widget{}
-	for _, w := range m.dashboard.Widgets {
-		groups[w.Group] = append(groups[w.Group], w)
-	}
-	keys := make([]string, 0, len(groups))
-	for k := range groups {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
 	columns := 2
 	if m.width > 0 && m.width < 90 {
 		columns = 1
 	}
 	positions := make(map[string]tuiPosition, len(m.dashboard.Widgets))
-	row := 0
-	for _, group := range keys {
-		for i, w := range groups[group] {
-			positions[w.ID] = tuiPosition{x: i % columns, y: row + i/columns}
-		}
-		row += (len(groups[group])+columns-1)/columns + 1
+	for i, w := range m.dashboard.Widgets {
+		positions[w.ID] = tuiPosition{x: i % columns, y: i / columns}
 	}
 	return positions
 }
@@ -551,15 +538,6 @@ func (m tuiModel) View() string {
 	if m.picker {
 		return m.pickerView()
 	}
-	groups := map[string][]widget{}
-	for _, w := range m.dashboard.Widgets {
-		groups[w.Group] = append(groups[w.Group], w)
-	}
-	keys := make([]string, 0, len(groups))
-	for k := range groups {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
 	controls := "a add • d delete • arrows move/focus • n name • m manage layouts • q quit"
 	if m.picker {
 		controls = "Add widget: ↑/↓ choose • Enter toggle • Esc close"
@@ -581,31 +559,27 @@ func (m tuiModel) View() string {
 		b.WriteString(tuiDim.Render("No widgets selected. Press a to add one."))
 		return b.String()
 	}
-	for _, group := range keys {
-		b.WriteString(tuiGroup.Render(group))
-		b.WriteByte('\n')
-		cards := make([]string, 0, len(groups[group]))
-		for _, w := range groups[group] {
-			card := tuiCard.Render(renderTUICard(w))
-			if m.focus < len(m.dashboard.Widgets) && m.dashboard.Widgets[m.focus].ID == w.ID {
-				card = tuiFocus.Render(renderTUICard(w))
-			}
-			cards = append(cards, card)
+	cards := make([]string, 0, len(m.dashboard.Widgets))
+	for i, w := range m.dashboard.Widgets {
+		card := tuiCard.Render(renderTUICard(w))
+		if i == m.focus {
+			card = tuiFocus.Render(renderTUICard(w))
 		}
-		columns := 2
-		if m.width > 0 && m.width < 90 {
-			columns = 1
+		cards = append(cards, card)
+	}
+	columns := 2
+	if m.width > 0 && m.width < 90 {
+		columns = 1
+	}
+	for i := 0; i < len(cards); i += columns {
+		end := i + columns
+		if end > len(cards) {
+			end = len(cards)
 		}
-		for i := 0; i < len(cards); i += columns {
-			end := i + columns
-			if end > len(cards) {
-				end = len(cards)
-			}
-			b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, cards[i:end]...))
-			b.WriteByte('\n')
-		}
+		b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, cards[i:end]...))
 		b.WriteByte('\n')
 	}
+	b.WriteByte('\n')
 	return b.String()
 }
 func (m tuiModel) pickerView() string {
@@ -656,7 +630,7 @@ func renderTUICard(w widget) string {
 	if status == "" {
 		status = "ok"
 	}
-	text := fmt.Sprintf("%s\n%s\n%s", w.Title, value, tuiDim.Render(status))
+	text := fmt.Sprintf("%s\n%s\n%s\n%s", tuiGroup.Render(w.Group), w.Title, value, tuiDim.Render(status))
 	if w.Note != "" {
 		text += "\n" + tuiDim.Render(w.Note)
 	}
