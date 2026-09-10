@@ -10,7 +10,6 @@ import (
 	"gryphdash/internal/config"
 	dashboardpkg "gryphdash/internal/dashboard"
 	"gryphdash/internal/subprocess"
-	codexprovider "gryphdash/providers/codex"
 	openrouterprovider "gryphdash/providers/openrouter"
 )
 
@@ -20,10 +19,7 @@ func newCollector(cfg config.Config) *collector {
 }
 
 func newCollectorAndCatalog(cfg config.Config) (*collector, dashboardpkg.WidgetCatalog) {
-	providers := []collectorpkg.Reader{
-		codexprovider.NewAdapter(cfg.CodexExecutable),
-		openrouterprovider.NewAdapter(cfg.OpenRouterKey, &http.Client{Timeout: 15 * time.Second}),
-	}
+	providers := []collectorpkg.Reader{openrouterprovider.NewAdapter(cfg.OpenRouterKey, &http.Client{Timeout: 15 * time.Second})}
 	external, err := subprocess.Discover(cfg.ProviderDirectory)
 	if err != nil {
 		log.Printf("external provider discovery: %v", err)

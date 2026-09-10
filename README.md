@@ -148,6 +148,15 @@ It publishes its EUR/USD, EUR/GBP, and EUR/HUF widgets. Override the pairs with
 parsing, source names, and credentials; the collector only understands the
 generic subprocess protocol.
 
+Codex is also distributed as an external provider executable:
+
+```sh
+go build -o bin/gryphdash-provider-codex ./cmd/gryphdash-provider-codex
+```
+
+The Windows build helper produces both provider executables alongside the
+desktop binary. `GRYPHDASH_CODEX_BIN` is inherited by the Codex provider process.
+
 ## Metrics
 
 - Account plan and authentication type.

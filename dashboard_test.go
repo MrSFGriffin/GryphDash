@@ -13,8 +13,18 @@ import (
 	"time"
 
 	collectorpkg "gryphdash/internal/collector"
+	dashboardpkg "gryphdash/internal/dashboard"
 	codexprovider "gryphdash/providers/codex"
 )
+
+func testCatalog(t *testing.T) widgetCatalog {
+	t.Helper()
+	catalog, err := dashboardpkg.MergeCatalog(dashboardpkg.Catalog(), codexprovider.Catalog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return catalog
+}
 
 func fixture(t *testing.T, raw string) map[string]any {
 	t.Helper()
@@ -31,7 +41,7 @@ func TestDashboardMetrics(t *testing.T) {
 	c := collectorpkg.New(collectorpkg.Options{})
 	c.SetSnapshot(snapshot{Results: map[string]result{"codex/limits": {Data: limits, Updated: now}, "codex/usage": {Data: usage, Updated: now}}})
 	w := httptest.NewRecorder()
-	newHandler(c).ServeHTTP(w, httptest.NewRequest("GET", "/api/widgets", nil))
+	newHandlerWithCatalog(c, testCatalog(t)).ServeHTTP(w, httptest.NewRequest("GET", "/api/widgets", nil))
 	if w.Code != 200 {
 		t.Fatal(w.Code)
 	}
@@ -74,16 +84,16 @@ func TestDashboardMetrics(t *testing.T) {
 	if !strings.Contains(w.Body.String(), "OpenRouter") {
 		t.Fatal("configured OpenRouter widgets are missing")
 	}
-	if len(configuredWidgetCatalog.Widgets) < 20 {
-		t.Fatalf("widget catalog unexpectedly small: %d", len(configuredWidgetCatalog.Widgets))
+	if len(testCatalog(t).Widgets) < 20 {
+		t.Fatalf("widget catalog unexpectedly small: %d", len(testCatalog(t).Widgets))
 	}
-	for _, c := range configuredWidgetCatalog.Widgets {
+	for _, c := range testCatalog(t).Widgets {
 		if c.Group != "Codex" && c.Group != "OpenRouter" && c.Group != "Currency" {
 			t.Fatalf("unexpected widget group %q", c.Group)
 		}
 	}
 	openRouterURLs := 0
-	for _, c := range configuredWidgetCatalog.Widgets {
+	for _, c := range testCatalog(t).Widgets {
 		if c.Group == "OpenRouter" {
 			if c.Logic.Source == "" || c.Logic.URL == "" || c.Logic.Method == "" {
 				t.Fatalf("OpenRouter widget is missing URL logic: %+v", c)
@@ -96,8 +106,8 @@ func TestDashboardMetrics(t *testing.T) {
 	}
 }
 func TestWidgetIDsSurviveMissingData(t *testing.T) {
-	missing := buildDashboard(snapshot{})
-	live := buildDashboard(snapshot{Results: map[string]result{"codex/limits": {Data: fixture(t, `{"buckets":{"codex":{"primary":{"usedPercent":1,"windowDurationMins":300},"individualLimit":{"limit":"50","used":"1","remainingPercent":98,"resetsAt":1700000000}}},"rateLimitResetCredits":{"availableCount":1,"credits":[{"id":"reset-a","title":"A reset","expiresAt":null}]}}`)}}})
+	missing := buildDashboardWithCatalog(snapshot{}, testCatalog(t))
+	live := buildDashboardWithCatalog(snapshot{Results: map[string]result{"codex/limits": {Data: fixture(t, `{"buckets":{"codex":{"primary":{"usedPercent":1,"windowDurationMins":300},"individualLimit":{"limit":"50","used":"1","remainingPercent":98,"resetsAt":1700000000}}},"rateLimitResetCredits":{"availableCount":1,"credits":[{"id":"reset-a","title":"A reset","expiresAt":null}]}}`)}}}, testCatalog(t))
 	ids := map[string]bool{}
 	for _, w := range live.Widgets {
 		ids[w.ID] = true
@@ -125,7 +135,7 @@ func TestNullZeroAndAssets(t *testing.T) {
 	c := collectorpkg.New(collectorpkg.Options{})
 	c.SetSnapshot(snapshot{Results: map[string]result{"codex/limits": {Data: fixture(t, `{"buckets":{"codex":{"credits":{"balance":"<script>alert(1)</script>","hasCredits":false}}},"accountId":"private-account-id"}`)}}})
 	w := httptest.NewRecorder()
-	newHandler(c).ServeHTTP(w, httptest.NewRequest("GET", "/api/widgets", nil))
+	newHandlerWithCatalog(c, testCatalog(t)).ServeHTTP(w, httptest.NewRequest("GET", "/api/widgets", nil))
 	if strings.Contains(w.Body.String(), "<script>") || strings.Contains(w.Body.String(), "private-account-id") {
 		t.Fatal("unsafe or unnecessary raw data in widget API")
 	}
@@ -135,7 +145,7 @@ func TestNullZeroAndAssets(t *testing.T) {
 	for _, path := range []string{"/", "/api/widgets", "/assets/dashboard.js", "/assets/dashboard.css", "/assets/gridstack-all.js", "/assets/gridstack.min.css"} {
 		for _, method := range []string{"GET", "HEAD", "POST"} {
 			w := httptest.NewRecorder()
-			newHandler(c).ServeHTTP(w, httptest.NewRequest(method, path, nil))
+			newHandlerWithCatalog(c, testCatalog(t)).ServeHTTP(w, httptest.NewRequest(method, path, nil))
 			want := 200
 			if method == "POST" {
 				want = 405
@@ -153,7 +163,7 @@ func TestNullZeroAndAssets(t *testing.T) {
 	}
 	for _, path := range []string{"/missing", "/assets/", "/assets/../codex.go", "/web/vendor/gridstack/"} {
 		w := httptest.NewRecorder()
-		newHandler(c).ServeHTTP(w, httptest.NewRequest("GET", path, nil))
+		newHandlerWithCatalog(c, testCatalog(t)).ServeHTTP(w, httptest.NewRequest("GET", path, nil))
 		if w.Code != 404 {
 			t.Fatal("unexpected asset access", path, w.Code)
 		}
