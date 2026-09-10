@@ -19,7 +19,7 @@ import (
 
 func testCatalog(t *testing.T) widgetCatalog {
 	t.Helper()
-	catalog, err := dashboardpkg.MergeCatalog(dashboardpkg.Catalog(), codexprovider.Catalog())
+	catalog, err := dashboardpkg.MergeCatalog(dashboardpkg.Catalog(), codexprovider.Catalog(), openrouterprovider.Catalog())
 	if err != nil {
 		t.Fatal(err)
 	}

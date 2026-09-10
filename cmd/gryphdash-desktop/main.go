@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
@@ -26,7 +25,6 @@ import (
 	"gryphdash/internal/logging"
 	"gryphdash/internal/subprocess"
 	webhandler "gryphdash/internal/web"
-	openrouterprovider "gryphdash/providers/openrouter"
 	webassets "gryphdash/web"
 )
 
@@ -64,7 +62,7 @@ func main() {
 		log.Print(err)
 		os.Exit(1)
 	}
-	providers := []collector.Reader{openrouterprovider.NewAdapter(cfg.OpenRouterKey, &http.Client{Timeout: 15 * time.Second})}
+	providers := []collector.Reader{}
 	externalProviders, discoverErr := subprocess.Discover(cfg.ProviderDirectory)
 	if discoverErr != nil {
 		log.Printf("external provider discovery: %v", discoverErr)

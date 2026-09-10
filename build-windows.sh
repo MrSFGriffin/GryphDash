@@ -8,6 +8,7 @@ output_dir="$repo_root/bin"
 output_file="$output_dir/gryphdash-desktop-windows-amd64.exe"
 currency_output_file="$output_dir/gryphdash-provider-currency-windows-amd64.exe"
 codex_output_file="$output_dir/gryphdash-provider-codex-windows-amd64.exe"
+openrouter_output_file="$output_dir/gryphdash-provider-openrouter-windows-amd64.exe"
 
 mkdir -p "$output_dir"
 
@@ -32,3 +33,8 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build \
   -o "$codex_output_file" \
   ./cmd/gryphdash-provider-codex
 printf 'Built %s\n' "$codex_output_file"
+
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build \
+  -o "$openrouter_output_file" \
+  ./cmd/gryphdash-provider-openrouter
+printf 'Built %s\n' "$openrouter_output_file"
