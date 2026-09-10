@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -45,5 +46,29 @@ func TestDiscoverReportsDisabledAndInvalidRepositoriesWithoutFetching(t *testing
 	}
 	if results[1].Error == "" || !strings.Contains(results[1].Error, "HTTPS") {
 		t.Fatalf("invalid result = %+v", results[1])
+	}
+}
+
+func TestMetadataDiscoveryDoesNotDownloadArtifacts(t *testing.T) {
+	manifest := validManifest()
+	var artifactRequests atomic.Int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/artifact" {
+			artifactRequests.Add(1)
+			_, _ = w.Write([]byte("must not be downloaded during discovery"))
+			return
+		}
+		manifest.Provider.Artifacts["linux-amd64"] = Artifact{URL: "https://" + request.Host + "/artifact", SHA256: strings.Repeat("a", 64)}
+		_, _ = w.Write(mustJSON(t, manifest))
+	}))
+	defer server.Close()
+	client := TLSClient(&tls.Config{RootCAs: serverCertPool(t, server)})
+	settings := Settings{Repositories: []ConfiguredRepository{{URL: server.URL + "/manifest.json", Enabled: true}}}
+	results := Discover(context.Background(), settings, NewClient(client), nil)
+	if len(results) != 1 || results[0].Manifest == nil || results[0].Error != "" {
+		t.Fatalf("discovery = %+v", results)
+	}
+	if artifactRequests.Load() != 0 {
+		t.Fatalf("artifact requests during metadata discovery = %d", artifactRequests.Load())
 	}
 }
