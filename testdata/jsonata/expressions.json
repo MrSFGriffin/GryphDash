@@ -1,0 +1,9 @@
+[
+  {"name":"path","expression":"account.name","input":{"account":{"name":"Ada"}},"expected":"Ada"},
+  {"name":"arithmetic","expression":"used / limit * 100","input":{"used":25,"limit":50},"expected":50},
+  {"name":"filter","expression":"orders[status = 'open'].total","input":{"orders":[{"status":"open","total":3},{"status":"closed","total":9}]},"expected":3},
+  {"name":"array","expression":"items.price","input":{"items":[{"price":2},{"price":4}]},"expected":[2,4]},
+  {"name":"missing","expression":"account.missing","input":{"account":{}},"expected":null},
+  {"name":"boolean","expression":"used < limit and enabled","input":{"used":2,"limit":5,"enabled":true},"expected":true},
+  {"name":"timestamp","expression":"$fromMillis(timestamp, '[Y0001]-[M01]-[D01]')","input":{"timestamp":86400000},"expected":"1970-01-02"}
+]

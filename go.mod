@@ -6,6 +6,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/getlantern/systray v1.2.2
+	github.com/jsonata-go/jsonata v0.0.0-20250709164031-599f35f32e5f
 	github.com/wailsapp/wails/v2 v2.15.0
 	golang.org/x/sys v0.46.0
 )
