@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"gryphdash/internal/jsonata"
 )
 
 // ProtocolVersion is the provider contract consumed by the customizable
@@ -28,6 +30,10 @@ type SourceDescription struct {
 	URL         string         `json:"url,omitempty"`
 	Method      string         `json:"method,omitempty"`
 }
+
+// DataSourceDescription is the descriptive name used by the protocol
+// documentation. SourceDescription remains as the concise Go name.
+type DataSourceDescription = SourceDescription
 
 type ProviderDescription struct {
 	ID              string              `json:"id"`
@@ -129,6 +135,46 @@ func ParseProviderDescription(data []byte) (ProviderDescription, error) {
 	return v, ValidateProviderDescription(v)
 }
 
+func ParseWidgetTemplate(data []byte) (WidgetTemplate, error) {
+	var v WidgetTemplate
+	if err := ParseStrict(data, &v); err != nil {
+		return v, err
+	}
+	return v, ValidateWidgetTemplate(v)
+}
+
+func ParseWidgetDefinition(data []byte, templates, sources map[string]bool) (WidgetDefinition, error) {
+	var v WidgetDefinition
+	if err := ParseStrict(data, &v); err != nil {
+		return v, err
+	}
+	return v, ValidateWidgetDefinition(v, templates, sources)
+}
+
+// ValidateTemplateSet validates references and rejects duplicate template IDs
+// across packs. Provider descriptions use this same check after validating
+// their source and definition references.
+func ValidateTemplateSet(packs []TemplatePack) error {
+	seen := map[string]bool{}
+	references := map[string][]string{}
+	for _, pack := range packs {
+		if err := validateID("template pack ID", pack.ID); err != nil {
+			return err
+		}
+		for _, template := range pack.Templates {
+			if err := ValidateWidgetTemplate(template); err != nil {
+				return err
+			}
+			if seen[template.ID] {
+				return fmt.Errorf("duplicate template ID %q", template.ID)
+			}
+			seen[template.ID] = true
+			references[template.ID] = append([]string(nil), template.References...)
+		}
+	}
+	return validateTemplateReferences(seen, references)
+}
+
 func ValidateProviderDescription(v ProviderDescription) error {
 	if err := validateID("provider ID", v.ID); err != nil {
 		return err
@@ -192,6 +238,9 @@ func ValidateWidgetTemplate(v WidgetTemplate) error {
 		return err
 	}
 	for _, field := range []struct{ name, value string }{{"template name", v.Name}, {"template description", v.Description}, {"template origin", v.Origin}, {"template HTML", v.HTML}, {"template CSS", v.CSS}, {"template TUI fallback", v.TUIFallback}} {
+		if field.name == "template CSS" {
+			continue
+		}
 		if err := text(field.name, field.value); err != nil {
 			return err
 		}
@@ -328,42 +377,7 @@ func ValidateDashboardDocument(v DashboardDocument, definitions, templates map[s
 }
 
 func ValidateExpression(expression string) error {
-	if strings.TrimSpace(expression) == "" {
-		return errors.New("expression is empty")
-	}
-	depth := 0
-	quote := byte(0)
-	escaped := false
-	for i := 0; i < len(expression); i++ {
-		c := expression[i]
-		if quote != 0 {
-			if escaped {
-				escaped = false
-			} else if c == '\\' {
-				escaped = true
-			} else if c == quote {
-				quote = 0
-			}
-			continue
-		}
-		if c == '\'' || c == '"' {
-			quote = c
-			continue
-		}
-		switch c {
-		case '(', '[', '{':
-			depth++
-		case ')', ']', '}':
-			depth--
-			if depth < 0 {
-				return fmt.Errorf("unexpected %q at position %d", c, i)
-			}
-		}
-	}
-	if quote != 0 || depth != 0 {
-		return errors.New("unbalanced expression")
-	}
-	return nil
+	return jsonata.Validate(expression)
 }
 
 func validateSource(v SourceDescription) error {

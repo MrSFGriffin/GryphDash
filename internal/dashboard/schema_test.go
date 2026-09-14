@@ -32,6 +32,19 @@ func TestValidateProviderDescription(t *testing.T) {
 	}
 }
 
+func TestStrictSchemaParsing(t *testing.T) {
+	good := `{"id":"core/card","name":"Card","description":"A card","origin":"core","revision":1,"project":{},"html":"<span></span>","css":"","tuiFallback":"card","width":4,"height":2}`
+	if _, err := ParseWidgetTemplate([]byte(good)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ParseWidgetTemplate([]byte(`{"id":"core/card","name":"Card","description":"A card","origin":"core","revision":1,"project":{},"html":"<span></span>","css":"","tuiFallback":"card","width":4,"height":2,"unknown":true}`)); err == nil {
+		t.Fatal("expected unknown field rejection")
+	}
+	if _, err := ParseWidgetTemplate([]byte(good + ` {}`)); err == nil {
+		t.Fatal("expected trailing JSON rejection")
+	}
+}
+
 func TestValidateDashboardDocument(t *testing.T) {
 	if err := ValidateDashboardDocument(DashboardDocument{Version: 1, ID: "default", Name: "Default", Revision: 1, Instances: []WidgetInstance{{ID: "instance-1", DefinitionID: "codex/card", TemplateID: "core/card"}}, Grid: []GridPosition{{ID: "instance-1", X: 0, Y: 0, W: 4, H: 2}}, TUIOrder: []string{"instance-1"}}, map[string]bool{"codex/card": true}, map[string]bool{"core/card": true}); err != nil {
 		t.Fatal(err)
@@ -47,7 +60,7 @@ func TestValidateExpression(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, expression := range []string{"", "items[", "'unterminated"} {
+	for _, expression := range []string{"", "items[", "'unterminated", "1 +* 2"} {
 		if err := ValidateExpression(expression); err == nil {
 			t.Fatalf("expected invalid expression %q", expression)
 		}

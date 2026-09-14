@@ -5,5 +5,5 @@
   {"name":"array","expression":"items.price","input":{"items":[{"price":2},{"price":4}]},"expected":[2,4]},
   {"name":"missing","expression":"account.missing","input":{"account":{}},"expected":null},
   {"name":"boolean","expression":"used < limit and enabled","input":{"used":2,"limit":5,"enabled":true},"expected":true},
-  {"name":"timestamp","expression":"$fromMillis(timestamp, '[Y0001]-[M01]-[D01]')","input":{"timestamp":0},"expected":"1970-01-01"}
+  {"name":"timestamp","expression":"$fromMillis(timestamp, '[Y0001]-[M01]-[D01]')","input":{"timestamp":86400000},"expected":"1970-01-02"}
 ]
