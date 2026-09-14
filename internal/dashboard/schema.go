@@ -155,10 +155,15 @@ func ValidateProviderDescription(v ProviderDescription) error {
 	seenTemplates := map[string]bool{}
 	seenDefinitions := map[string]bool{}
 	references := map[string][]string{}
+	seenPacks := map[string]bool{}
 	for _, pack := range v.TemplatePacks {
 		if err := validateID("template pack ID", pack.ID); err != nil {
 			return err
 		}
+		if seenPacks[pack.ID] {
+			return fmt.Errorf("duplicate template pack ID %q", pack.ID)
+		}
+		seenPacks[pack.ID] = true
 		for _, template := range pack.Templates {
 			if err := ValidateWidgetTemplate(template); err != nil {
 				return err
@@ -241,6 +246,11 @@ func ValidateWidgetDefinition(v WidgetDefinition, templates, sources map[string]
 			if source, _ := input["source"].(string); source != "" && !sources[source] {
 				return fmt.Errorf("definition %q references unknown source %q", v.ID, source)
 			}
+			if expression, _ := input["expression"].(string); expression != "" {
+				if err := ValidateExpression(expression); err != nil {
+					return fmt.Errorf("definition %q input %q: %w", v.ID, name, err)
+				}
+			}
 		}
 	}
 	return nil
@@ -269,6 +279,7 @@ func ValidateDashboardDocument(v DashboardDocument, definitions, templates map[s
 	}
 	instances := map[string]bool{}
 	grid := map[string]bool{}
+	ordered := map[string]bool{}
 	for _, instance := range v.Instances {
 		if err := validateID("instance ID", instance.ID); err != nil {
 			return err
@@ -282,6 +293,14 @@ func ValidateDashboardDocument(v DashboardDocument, definitions, templates map[s
 		}
 		if !templates[instance.TemplateID] {
 			return fmt.Errorf("instance %q references unknown template %q", instance.ID, instance.TemplateID)
+		}
+		for inputName, input := range instance.Inputs {
+			if strings.TrimSpace(inputName) == "" || strings.TrimSpace(input.Source) == "" {
+				return fmt.Errorf("instance %q has invalid input %q", instance.ID, inputName)
+			}
+			if err := ValidateExpression(input.Expression); err != nil {
+				return fmt.Errorf("instance %q input %q: %w", instance.ID, inputName, err)
+			}
 		}
 	}
 	for _, p := range v.Grid {
@@ -300,6 +319,10 @@ func ValidateDashboardDocument(v DashboardDocument, definitions, templates map[s
 		if !instances[id] {
 			return fmt.Errorf("TUI order references unknown instance %q", id)
 		}
+		if ordered[id] {
+			return fmt.Errorf("duplicate TUI order instance %q", id)
+		}
+		ordered[id] = true
 	}
 	return nil
 }
