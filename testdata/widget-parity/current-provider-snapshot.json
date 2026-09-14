@@ -1,0 +1,87 @@
+{
+  "results": {
+    "codex/account": {
+      "data": {
+        "account": {
+          "planType": "Plus",
+          "type": "chatgpt"
+        }
+      },
+      "updated": "2023-11-14T22:13:20Z"
+    },
+    "codex/limits": {
+      "data": {
+        "buckets": {
+          "codex": {
+            "primary": {"usedPercent": 25, "windowDurationMins": 300, "resetsAt": 1700003600},
+            "secondary": {"usedPercent": 4, "windowDurationMins": 10080, "resetsAt": 1700604800},
+            "credits": {"balance": "12", "hasCredits": true, "unlimited": false},
+            "planType": "Plus",
+            "limitName": "Codex",
+            "spendControlReached": false,
+            "rateLimitReachedType": "none",
+            "individualLimit": {"limit": "50", "used": "12", "remainingPercent": 76, "resetsAt": 1700010800}
+          },
+          "other": {
+            "primary": {"usedPercent": 10, "windowDurationMins": 60, "resetsAt": 1700001800},
+            "secondary": {"usedPercent": 85, "windowDurationMins": 10080, "resetsAt": 1700608400},
+            "credits": {"balance": "0", "hasCredits": false, "unlimited": true},
+            "planType": "Team",
+            "limitName": "Shared",
+            "spendControlReached": true,
+            "rateLimitReachedType": "hard",
+            "individualLimit": {"limit": "200", "used": "120", "remainingPercent": 40, "resetsAt": 1700014400}
+          }
+        },
+        "rateLimitResetCredits": {
+          "availableCount": 2,
+          "credits": [
+            {"id": "reset-a", "title": "Reset A", "description": "First earned reset", "status": "available", "resetType": "earned", "grantedAt": 1699990000, "expiresAt": null},
+            {"id": "reset-b", "title": "Reset B", "description": "Second earned reset", "status": "used", "resetType": "earned", "grantedAt": 1699980000, "expiresAt": 1700100000}
+          ]
+        }
+      },
+      "updated": "2023-11-14T22:13:20Z"
+    },
+    "codex/usage": {
+      "data": {
+        "summary": {
+          "lifetimeTokens": 1234567,
+          "peakDailyTokens": 765432,
+          "longestRunningTurnSec": 42,
+          "currentStreakDays": 7,
+          "longestStreakDays": 21
+        },
+        "dailyUsageBuckets": [
+          {"startDate": "2023-11-12", "tokens": 0},
+          {"startDate": "2023-11-13", "tokens": 25},
+          {"startDate": "2023-11-14", "tokens": 100}
+        ]
+      },
+      "updated": "2023-11-14T22:13:20Z"
+    },
+    "openrouter/key": {
+      "data": {
+        "usage_monthly": 12.34,
+        "limit_remaining": 87.66,
+        "usage_daily": 1.25,
+        "usage_weekly": 4.5,
+        "limit": 100,
+        "limit_reset": "monthly",
+        "expires_at": 1700007200
+      },
+      "updated": "2023-11-14T22:13:20Z"
+    },
+    "openrouter/credits": {
+      "data": {
+        "total_credits": 250.5,
+        "total_usage": 99.75
+      },
+      "updated": "2023-11-14T22:13:20Z"
+    },
+    "currency/eur-usd": {"data": {"rate": 1.08}, "updated": "2023-11-14T22:13:20Z"},
+    "currency/eur-gbp": {"data": {"rate": 0.87}, "updated": "2023-11-14T22:13:20Z"},
+    "currency/gbp-eur": {"data": {"rate": 1.15}, "updated": "2023-11-14T22:13:20Z"},
+    "currency/eur-huf": {"data": {"rate": 380.25}, "updated": "2023-11-14T22:13:20Z"}
+  }
+}
