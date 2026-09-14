@@ -1,0 +1,23 @@
+{
+  "name": "gryphdash",
+  "private": true,
+  "version": "0.1.0",
+  "description": "GryphDash frontend build tooling",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "test": "node --test web/src/**/*.test.js",
+    "check": "node --check web/src/main.js && node --check web/src/dashboard.js && node --check vite.config.js",
+    "check:generated": "npm run build && git diff --exit-code -- web/dashboard.js"
+  },
+  "dependencies": {
+    "@codemirror/lang-html": "6.4.12",
+    "@codemirror/state": "6.7.4",
+    "@codemirror/view": "6.43.11",
+    "grapesjs": "0.23.6",
+    "jsonata": "2.0.6"
+  },
+  "devDependencies": {
+    "vite": "8.3.0"
+  }
+}
