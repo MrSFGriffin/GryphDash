@@ -3,6 +3,7 @@
 set -euo pipefail
 
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+"$repo_root/scripts/check-generated-assets.sh"
 desktop_dir="$repo_root/cmd/gryphdash-desktop"
 output_dir="$repo_root/bin"
 output_file="$output_dir/gryphdash-desktop-windows-amd64.exe"
