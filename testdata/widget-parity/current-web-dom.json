@@ -1,0 +1,1205 @@
+{
+  "cards": [
+    {
+      "id": "codex/account/auth",
+      "ariaLabel": "Codex: Authentication",
+      "title": "Authentication",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "chatgpt"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Local Codex login"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Authentication"
+    },
+    {
+      "id": "codex/account/plan",
+      "ariaLabel": "Codex: Account plan",
+      "title": "Account plan",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "Plus"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "ChatGPT subscription"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Account plan"
+    },
+    {
+      "id": "codex/bucket/codex/credits/balance",
+      "ariaLabel": "Codex: Credits remaining",
+      "title": "Credits remaining",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "12"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Spendable credits · not USD"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Credits remaining"
+    },
+    {
+      "id": "codex/bucket/codex/credits/hasCredits",
+      "ariaLabel": "Codex: Credits available",
+      "title": "Credits available",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "Yes"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Whether the account has spendable credits"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Credits available"
+    },
+    {
+      "id": "codex/bucket/codex/credits/unlimited",
+      "ariaLabel": "Codex: Unlimited credits",
+      "title": "Unlimited credits",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "No"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported credit status"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Unlimited credits"
+    },
+    {
+      "id": "codex/bucket/codex/individual/limit",
+      "ariaLabel": "Codex: Individual spend allowance",
+      "title": "Individual spend allowance",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "50"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported units"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Individual spend allowance"
+    },
+    {
+      "id": "codex/bucket/codex/individual/remainingPercent",
+      "ariaLabel": "Codex: Individual spend remaining",
+      "title": "Individual spend remaining",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "76"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported percent"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Individual spend remaining"
+    },
+    {
+      "id": "codex/bucket/codex/individual/resetsAt",
+      "ariaLabel": "Codex: Individual spend reset",
+      "title": "Individual spend reset",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "1700010800"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "UTC reset time"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Individual spend reset"
+    },
+    {
+      "id": "codex/bucket/codex/individual/used",
+      "ariaLabel": "Codex: Individual spend used",
+      "title": "Individual spend used",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "12"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported units"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Individual spend used"
+    },
+    {
+      "id": "codex/bucket/codex/limitName",
+      "ariaLabel": "Codex: Limit name",
+      "title": "Limit name",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "Codex"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Optional provider label for this limit bucket"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Limit name"
+    },
+    {
+      "id": "codex/bucket/codex/planType",
+      "ariaLabel": "Codex: Bucket plan",
+      "title": "Bucket plan",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "Plus"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Plan associated with this limit bucket"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Bucket plan"
+    },
+    {
+      "id": "codex/bucket/codex/primary",
+      "ariaLabel": "Codex: 5-hour limit",
+      "title": "5-hour limit",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "75%"
+        },
+        {
+          "tag": "progress",
+          "text": "",
+          "max": 100,
+          "value": 75,
+          "ariaLabel": "5-hour limit: 75% remaining"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Remaining percentage in the primary quota window · 25% used"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Resets 2023-11-14 23:13 UTC"
+        },
+        {
+          "tag": "p",
+          "class": "countdown",
+          "text": "",
+          "resetsAt": "1700003600"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove 5-hour limit"
+    },
+    {
+      "id": "codex/bucket/codex/rateLimitReachedType",
+      "ariaLabel": "Codex: Reached-limit state",
+      "title": "Reached-limit state",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "none"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported limit state"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Reached-limit state"
+    },
+    {
+      "id": "codex/bucket/codex/secondary",
+      "ariaLabel": "Codex: Weekly limit",
+      "title": "Weekly limit",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "96%"
+        },
+        {
+          "tag": "progress",
+          "text": "",
+          "max": 100,
+          "value": 96,
+          "ariaLabel": "Weekly limit: 96% remaining"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Remaining percentage in the secondary quota window · 4% used"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Resets 2023-11-21 22:13 UTC"
+        },
+        {
+          "tag": "p",
+          "class": "countdown",
+          "text": "",
+          "resetsAt": "1700604800"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Weekly limit"
+    },
+    {
+      "id": "codex/bucket/codex/spendControlReached",
+      "ariaLabel": "Codex: Spend control reached",
+      "title": "Spend control reached",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "No"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported spend-control state"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Spend control reached"
+    },
+    {
+      "id": "codex/bucket/other/credits/balance",
+      "ariaLabel": "Codex: Credits remaining",
+      "title": "Credits remaining",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "0"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Spendable credits · not USD"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Credits remaining"
+    },
+    {
+      "id": "codex/bucket/other/credits/hasCredits",
+      "ariaLabel": "Codex: Credits available",
+      "title": "Credits available",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "No"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Whether the account has spendable credits"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Credits available"
+    },
+    {
+      "id": "codex/bucket/other/credits/unlimited",
+      "ariaLabel": "Codex: Unlimited credits",
+      "title": "Unlimited credits",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "Yes"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported credit status"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Unlimited credits"
+    },
+    {
+      "id": "codex/bucket/other/individual/limit",
+      "ariaLabel": "Codex: Individual spend allowance",
+      "title": "Individual spend allowance",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "200"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported units"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Individual spend allowance"
+    },
+    {
+      "id": "codex/bucket/other/individual/remainingPercent",
+      "ariaLabel": "Codex: Individual spend remaining",
+      "title": "Individual spend remaining",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "40"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported percent"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Individual spend remaining"
+    },
+    {
+      "id": "codex/bucket/other/individual/resetsAt",
+      "ariaLabel": "Codex: Individual spend reset",
+      "title": "Individual spend reset",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "1700014400"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "UTC reset time"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Individual spend reset"
+    },
+    {
+      "id": "codex/bucket/other/individual/used",
+      "ariaLabel": "Codex: Individual spend used",
+      "title": "Individual spend used",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "120"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported units"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Individual spend used"
+    },
+    {
+      "id": "codex/bucket/other/limitName",
+      "ariaLabel": "Codex: Limit name",
+      "title": "Limit name",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "Shared"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Optional provider label for this limit bucket"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Limit name"
+    },
+    {
+      "id": "codex/bucket/other/planType",
+      "ariaLabel": "Codex: Bucket plan",
+      "title": "Bucket plan",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "Team"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Plan associated with this limit bucket"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Bucket plan"
+    },
+    {
+      "id": "codex/bucket/other/primary",
+      "ariaLabel": "Codex: 60-minute limit",
+      "title": "60-minute limit",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "90%"
+        },
+        {
+          "tag": "progress",
+          "text": "",
+          "max": 100,
+          "value": 90,
+          "ariaLabel": "60-minute limit: 90% remaining"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Remaining percentage in the primary quota window · 10% used"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Resets 2023-11-14 22:43 UTC"
+        },
+        {
+          "tag": "p",
+          "class": "countdown",
+          "text": "",
+          "resetsAt": "1700001800"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove 60-minute limit"
+    },
+    {
+      "id": "codex/bucket/other/rateLimitReachedType",
+      "ariaLabel": "Codex: Reached-limit state",
+      "title": "Reached-limit state",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "hard"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported limit state"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Reached-limit state"
+    },
+    {
+      "id": "codex/bucket/other/secondary",
+      "ariaLabel": "Codex: Weekly limit",
+      "title": "Weekly limit",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "15%"
+        },
+        {
+          "tag": "progress",
+          "text": "",
+          "max": 100,
+          "value": 15,
+          "ariaLabel": "Weekly limit: 15% remaining"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Remaining percentage in the secondary quota window · 85% used"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Resets 2023-11-21 23:13 UTC"
+        },
+        {
+          "tag": "p",
+          "class": "countdown",
+          "text": "",
+          "resetsAt": "1700608400"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Weekly limit"
+    },
+    {
+      "id": "codex/bucket/other/spendControlReached",
+      "ariaLabel": "Codex: Spend control reached",
+      "title": "Spend control reached",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "Yes"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Provider-reported spend-control state"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Spend control reached"
+    },
+    {
+      "id": "codex/resets/count",
+      "ariaLabel": "Codex: Available resets",
+      "title": "Available resets",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "2"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Earned resets are separate from spendable credits"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Available resets"
+    },
+    {
+      "id": "codex/resets/details",
+      "ariaLabel": "Codex: Earned reset details",
+      "title": "Earned reset details",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "2 reset details returned"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Read only · the provider may return fewer details than the available count"
+        },
+        {
+          "tag": "section",
+          "class": "reset-detail",
+          "text": "Reset AFirst earned resetStatusavailableTypeearnedGranted2023-11-14 19:26 UTCExpiresNo expirationIDreset-a",
+          "resets": {
+            "title": "Reset A",
+            "description": "First earned reset",
+            "details": [
+              [
+                "Status",
+                "available"
+              ],
+              [
+                "Type",
+                "earned"
+              ],
+              [
+                "Granted",
+                "2023-11-14 19:26 UTC"
+              ],
+              [
+                "Expires",
+                "No expiration"
+              ],
+              [
+                "ID",
+                "reset-a"
+              ]
+            ]
+          }
+        },
+        {
+          "tag": "section",
+          "class": "reset-detail",
+          "text": "Reset BSecond earned resetStatususedTypeearnedGranted2023-11-14 16:40 UTCExpires2023-11-16 02:00 UTCIDreset-b",
+          "resets": {
+            "title": "Reset B",
+            "description": "Second earned reset",
+            "details": [
+              [
+                "Status",
+                "used"
+              ],
+              [
+                "Type",
+                "earned"
+              ],
+              [
+                "Granted",
+                "2023-11-14 16:40 UTC"
+              ],
+              [
+                "Expires",
+                "2023-11-16 02:00 UTC"
+              ],
+              [
+                "ID",
+                "reset-b"
+              ]
+            ]
+          }
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Earned reset details"
+    },
+    {
+      "id": "codex/usage/currentStreakDays",
+      "ariaLabel": "Codex: Current streak",
+      "title": "Current streak",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "7"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "days"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Current streak"
+    },
+    {
+      "id": "codex/usage/daily",
+      "ariaLabel": "Codex: Daily token activity",
+      "title": "Daily token activity",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "3 days returned"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Dates as returned by Codex; missing dates are not filled with zero"
+        },
+        {
+          "tag": "table",
+          "text": "DateTokensActivity2023-11-141002023-11-13252023-11-120",
+          "rows": [
+            {
+              "cells": [
+                "2023-11-14",
+                "100",
+                ""
+              ],
+              "meter": {
+                "value": 100,
+                "ariaLabel": "Relative activity on 2023-11-14"
+              }
+            },
+            {
+              "cells": [
+                "2023-11-13",
+                "25",
+                ""
+              ],
+              "meter": {
+                "value": 25,
+                "ariaLabel": "Relative activity on 2023-11-13"
+              }
+            },
+            {
+              "cells": [
+                "2023-11-12",
+                "0",
+                ""
+              ],
+              "meter": {
+                "ariaLabel": "Relative activity on 2023-11-12"
+              }
+            }
+          ]
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Daily token activity"
+    },
+    {
+      "id": "codex/usage/lifetimeTokens",
+      "ariaLabel": "Codex: Lifetime tokens",
+      "title": "Lifetime tokens",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "1234567"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "tokens"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Lifetime tokens"
+    },
+    {
+      "id": "codex/usage/longestRunningTurnSec",
+      "ariaLabel": "Codex: Longest-running turn",
+      "title": "Longest-running turn",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "42"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "seconds"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Longest-running turn"
+    },
+    {
+      "id": "codex/usage/longestStreakDays",
+      "ariaLabel": "Codex: Longest streak",
+      "title": "Longest streak",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "21"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "days"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Longest streak"
+    },
+    {
+      "id": "codex/usage/peakDailyTokens",
+      "ariaLabel": "Codex: Peak daily tokens",
+      "title": "Peak daily tokens",
+      "group": "Codex",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "765432"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "tokens"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Peak daily tokens"
+    },
+    {
+      "id": "currency/eur-gbp",
+      "ariaLabel": "Currency: EUR/GBP exchange rate",
+      "title": "EUR/GBP exchange rate",
+      "group": "Currency",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "0.87"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "British pounds per euro · Frankfurter reference rate"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove EUR/GBP exchange rate"
+    },
+    {
+      "id": "currency/eur-huf",
+      "ariaLabel": "Currency: EUR/HUF exchange rate",
+      "title": "EUR/HUF exchange rate",
+      "group": "Currency",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "380.25"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Hungarian forints per euro · Frankfurter reference rate"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove EUR/HUF exchange rate"
+    },
+    {
+      "id": "currency/eur-usd",
+      "ariaLabel": "Currency: EUR/USD exchange rate",
+      "title": "EUR/USD exchange rate",
+      "group": "Currency",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "1.08"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "US dollars per euro · Frankfurter reference rate"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove EUR/USD exchange rate"
+    },
+    {
+      "id": "currency/gbp-eur",
+      "ariaLabel": "Currency: GBP/EUR exchange rate",
+      "title": "GBP/EUR exchange rate",
+      "group": "Currency",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "1.15"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Euros per British pound · Frankfurter reference rate"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove GBP/EUR exchange rate"
+    },
+    {
+      "id": "openrouter/budget",
+      "ariaLabel": "OpenRouter: Budget remaining",
+      "title": "Budget remaining",
+      "group": "OpenRouter",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "87.66"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Remaining configured limit for the current OpenRouter API key · USD"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Budget remaining"
+    },
+    {
+      "id": "openrouter/credits",
+      "ariaLabel": "OpenRouter: Credit balance",
+      "title": "Credit balance",
+      "group": "OpenRouter",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "250.5"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Total purchased credits returned by OpenRouter · USD"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Credit balance"
+    },
+    {
+      "id": "openrouter/credits/used",
+      "ariaLabel": "OpenRouter: Credits used",
+      "title": "Credits used",
+      "group": "OpenRouter",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "99.75"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Total credits used according to the management endpoint · USD"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Credits used"
+    },
+    {
+      "id": "openrouter/expires",
+      "ariaLabel": "OpenRouter: Key expiration",
+      "title": "Key expiration",
+      "group": "OpenRouter",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "2023-11-15 00:13 UTC"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Expiration timestamp for the current API key"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Key expiration"
+    },
+    {
+      "id": "openrouter/limit",
+      "ariaLabel": "OpenRouter: Key spending limit",
+      "title": "Key spending limit",
+      "group": "OpenRouter",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "100"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Configured spending limit for the current OpenRouter API key · USD"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Key spending limit"
+    },
+    {
+      "id": "openrouter/limit-reset",
+      "ariaLabel": "OpenRouter: Key limit reset",
+      "title": "Key limit reset",
+      "group": "OpenRouter",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "monthly"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Reset period for the current API key"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Key limit reset"
+    },
+    {
+      "id": "openrouter/spend",
+      "ariaLabel": "OpenRouter: Spend this month",
+      "title": "Spend this month",
+      "group": "OpenRouter",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "12.34"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Usage charged to the current OpenRouter API key this month · USD"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Spend this month"
+    },
+    {
+      "id": "openrouter/usage/daily",
+      "ariaLabel": "OpenRouter: Usage today",
+      "title": "Usage today",
+      "group": "OpenRouter",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "1.25"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Usage charged to the current API key today · USD"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Usage today"
+    },
+    {
+      "id": "openrouter/usage/weekly",
+      "ariaLabel": "OpenRouter: Usage this week",
+      "title": "Usage this week",
+      "group": "OpenRouter",
+      "body": [
+        {
+          "tag": "p",
+          "class": "value",
+          "text": "4.5"
+        },
+        {
+          "tag": "p",
+          "class": "note",
+          "text": "Usage charged to the current API key this week · USD"
+        }
+      ],
+      "status": "Updated 2023-11-14 22:13:20 UTC",
+      "stale": false,
+      "removeAriaLabel": "Remove Usage this week"
+    }
+  ]
+}

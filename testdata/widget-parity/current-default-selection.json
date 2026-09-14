@@ -1,0 +1,10 @@
+[
+  "codex/bucket/codex/primary",
+  "codex/bucket/codex/secondary",
+  "codex/bucket/codex/credits/balance",
+  "codex/resets/count",
+  "codex/usage/lifetimeTokens",
+  "codex/usage/currentStreakDays",
+  "codex/usage/daily",
+  "codex/account/plan"
+]
