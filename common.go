@@ -38,11 +38,11 @@ func discoverExternalProviders(cfg config.Config) ([]subprocess.Provider, dashbo
 		log.Printf("external provider discovery: %v", err)
 	} else {
 	}
-	catalog, catalogErr := subprocess.CatalogWithError(context.Background(), external)
-	if catalogErr != nil {
-		log.Printf("external provider catalog rejected: %v", catalogErr)
+	description, descriptionErr := subprocess.DescriptionsWithError(context.Background(), external)
+	if descriptionErr != nil {
+		log.Printf("external provider descriptions rejected: %v", descriptionErr)
 	}
-	return external, catalog
+	return external, subprocess.CatalogFromDescription(description)
 }
 
 func discoverProviderRepositories() []providerrepo.Discovery {

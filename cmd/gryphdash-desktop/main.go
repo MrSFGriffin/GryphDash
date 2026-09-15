@@ -78,10 +78,11 @@ func main() {
 			providers = append(providers, provider)
 		}
 	}
-	widgetCatalog, catalogErr := subprocess.CatalogWithError(context.Background(), externalProviders)
-	if catalogErr != nil {
-		log.Printf("external provider catalog rejected: %v", catalogErr)
+	descriptions, descriptionsErr := subprocess.DescriptionsWithError(context.Background(), externalProviders)
+	if descriptionsErr != nil {
+		log.Printf("external provider descriptions rejected: %v", descriptionsErr)
 	}
+	widgetCatalog := subprocess.CatalogFromDescription(descriptions)
 	repositories := discoverDesktopProviderRepositories()
 	providerService := newDesktopProviderService(cfg, repositories)
 	collectorInstance := collector.New(collector.Options{Providers: providers})
@@ -249,11 +250,11 @@ func discoverDesktopExternalProviders(cfg config.Config) ([]subprocess.Provider,
 		log.Printf("external provider discovery: %v", err)
 		return nil, dashboard.WidgetCatalog{}
 	}
-	catalog, err := subprocess.CatalogWithError(context.Background(), external)
+	descriptions, err := subprocess.DescriptionsWithError(context.Background(), external)
 	if err != nil {
-		log.Printf("external provider catalog rejected: %v", err)
+		log.Printf("external provider descriptions rejected: %v", err)
 	}
-	return external, catalog
+	return external, subprocess.CatalogFromDescription(descriptions)
 }
 
 func newDesktopProviderService(cfg config.Config, repositories []providerrepo.Discovery) *providerrepo.Service {

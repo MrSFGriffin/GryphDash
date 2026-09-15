@@ -705,7 +705,11 @@ func (m tuiModel) repositoryView() string {
 		fmt.Fprintf(&b, "%s%s · %s\n", marker, name, state)
 		for _, status := range statuses {
 			if status.RepositoryURL == repository.URL {
-				fmt.Fprintf(&b, "   provider %s: %s\n", status.ProviderID, status.State)
+				fmt.Fprintf(&b, "   provider %s: %s", status.ProviderID, status.State)
+				if status.Error != "" {
+					fmt.Fprintf(&b, " (%s)", status.Error)
+				}
+				b.WriteByte('\n')
 			}
 		}
 	}
