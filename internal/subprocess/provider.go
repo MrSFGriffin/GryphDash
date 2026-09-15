@@ -159,21 +159,59 @@ func (p Provider) Read(parent context.Context) map[string]metrics.Result {
 	return response.Results
 }
 
+// Describe requests the provider's protocol-v2 data-source and template
+// description. It never adapts a protocol-v1 widget catalog.
+func (p Provider) Describe(parent context.Context) (dashboard.ProviderDescription, error) {
+	response, err := p.run(parent, "describe")
+	if err != nil {
+		return dashboard.ProviderDescription{}, err
+	}
+	if response.Error != "" {
+		return dashboard.ProviderDescription{}, fmt.Errorf("%s", response.Error)
+	}
+	if response.Description.ID == "" {
+		return dashboard.ProviderDescription{}, fmt.Errorf("provider returned no description")
+	}
+	if err := dashboard.ValidateProviderDescription(response.Description); err != nil {
+		return dashboard.ProviderDescription{}, err
+	}
+	return response.Description, nil
+}
+
+// Widgets is retained as a compatibility projection for the pre-cutover UI.
+// New providers are always discovered through Describe.
 func (p Provider) Widgets(parent context.Context) (dashboard.WidgetCatalog, error) {
-	response, err := p.run(parent, "widgets")
+	description, err := p.Describe(parent)
 	if err != nil {
 		return dashboard.WidgetCatalog{}, err
 	}
-	if response.Error != "" {
-		return dashboard.WidgetCatalog{}, fmt.Errorf("%s", response.Error)
+	widgets := make([]dashboard.WidgetConfig, 0, len(description.Definitions))
+	for _, definition := range description.Definitions {
+		widgets = append(widgets, dashboard.WidgetConfig{ID: definition.ID, Group: definition.Group, Name: definition.Name, Description: definition.Description, Default: definition.Default, Width: definition.Width, Height: definition.Height})
 	}
-	if len(response.Widgets.Widgets) == 0 {
-		return dashboard.WidgetCatalog{}, fmt.Errorf("provider returned no widgets")
+	return dashboard.WidgetCatalog{Widgets: widgets}, nil
+}
+
+func DescriptionsWithError(parent context.Context, providers []Provider) (dashboard.ProviderDescription, error) {
+	merged := dashboard.ProviderDescription{ProtocolVersion: dashboard.ProtocolVersion}
+	seen := map[string]bool{}
+	for _, provider := range providers {
+		description, err := provider.Describe(parent)
+		if err != nil {
+			slog.Warn("provider description unavailable", "provider", provider.Name(), "error", err)
+			continue
+		}
+		if seen[description.ID] {
+			return merged, fmt.Errorf("duplicate provider ID %q", description.ID)
+		}
+		seen[description.ID] = true
+		candidate, err := dashboard.MergeProviderDescriptions(merged, description)
+		if err != nil {
+			return merged, fmt.Errorf("provider %q: %w", provider.Name(), err)
+		}
+		merged = candidate
 	}
-	if err := dashboard.ValidateCatalog(response.Widgets); err != nil {
-		return dashboard.WidgetCatalog{}, err
-	}
-	return response.Widgets, nil
+	return merged, nil
 }
 
 func Catalog(parent context.Context, providers []Provider) dashboard.WidgetCatalog {
@@ -208,8 +246,8 @@ func (p Provider) run(parent context.Context, method string) (providerprotocol.R
 	defer cancel()
 
 	args := append([]string(nil), p.args...)
-	if method == "widgets" {
-		args = append(args, "-widgets")
+	if method == "describe" {
+		args = append(args, "-describe")
 	}
 	cmd := exec.CommandContext(ctx, p.executable, args...)
 	configureCommand(cmd)
@@ -227,9 +265,7 @@ func (p Provider) run(parent context.Context, method string) (providerprotocol.R
 		return providerprotocol.Response{}, err
 	}
 
-	if method == "widgets" {
-		_ = input.Close()
-	} else {
+	if method == "describe" || method == "read" {
 		requestErr := json.NewEncoder(input).Encode(providerprotocol.Request{Version: providerprotocol.Version, Method: method})
 		_ = input.Close()
 		if requestErr != nil {

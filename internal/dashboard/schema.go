@@ -45,6 +45,67 @@ type ProviderDescription struct {
 	Definitions     []WidgetDefinition  `json:"definitions,omitempty"`
 }
 
+// MergeProviderDescriptions validates and combines provider descriptions.
+// IDs are global because sources, templates, and definitions are addressed
+// directly by dashboard documents.
+func MergeProviderDescriptions(base ProviderDescription, additions ...ProviderDescription) (ProviderDescription, error) {
+	merged := base
+	if merged.ProtocolVersion == 0 {
+		merged.ProtocolVersion = ProtocolVersion
+	}
+	providers := map[string]bool{}
+	sources := map[string]bool{}
+	templates := map[string]bool{}
+	definitions := map[string]bool{}
+	if merged.ID != "" {
+		providers[merged.ID] = true
+	}
+	for _, source := range merged.Sources {
+		sources[source.ID] = true
+	}
+	for _, pack := range merged.TemplatePacks {
+		for _, template := range pack.Templates {
+			templates[template.ID] = true
+		}
+	}
+	for _, definition := range merged.Definitions {
+		definitions[definition.ID] = true
+	}
+	for _, addition := range additions {
+		if err := ValidateProviderDescription(addition); err != nil {
+			return ProviderDescription{}, err
+		}
+		if providers[addition.ID] {
+			return ProviderDescription{}, fmt.Errorf("duplicate provider ID %q", addition.ID)
+		}
+		providers[addition.ID] = true
+		for _, source := range addition.Sources {
+			if sources[source.ID] {
+				return ProviderDescription{}, fmt.Errorf("duplicate source ID %q", source.ID)
+			}
+			sources[source.ID] = true
+			merged.Sources = append(merged.Sources, source)
+		}
+		for _, pack := range addition.TemplatePacks {
+			for _, template := range pack.Templates {
+				if templates[template.ID] {
+					return ProviderDescription{}, fmt.Errorf("duplicate template ID %q", template.ID)
+				}
+				templates[template.ID] = true
+			}
+			merged.TemplatePacks = append(merged.TemplatePacks, pack)
+		}
+		for _, definition := range addition.Definitions {
+			if definitions[definition.ID] {
+				return ProviderDescription{}, fmt.Errorf("duplicate definition ID %q", definition.ID)
+			}
+			definitions[definition.ID] = true
+			merged.Definitions = append(merged.Definitions, definition)
+		}
+	}
+	return merged, nil
+}
+
 type TemplatePack struct {
 	ID          string           `json:"id"`
 	Name        string           `json:"name"`
