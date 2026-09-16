@@ -52,13 +52,16 @@ type RepositoryIndex struct {
 }
 
 type Provider struct {
-	ID              string                  `json:"id"`
-	Name            string                  `json:"name"`
-	Description     string                  `json:"description"`
-	Version         string                  `json:"version"`
-	ProtocolVersion int                     `json:"protocolVersion"`
-	Widgets         dashboard.WidgetCatalog `json:"widgets"`
-	Artifacts       map[string]Artifact     `json:"artifacts"`
+	ID              string                        `json:"id"`
+	Name            string                        `json:"name"`
+	Description     string                        `json:"description"`
+	Version         string                        `json:"version"`
+	ProtocolVersion int                           `json:"protocolVersion"`
+	Widgets         dashboard.WidgetCatalog       `json:"widgets"`
+	Sources         []dashboard.SourceDescription `json:"sources"`
+	TemplatePacks   []dashboard.TemplatePack      `json:"templatePacks,omitempty"`
+	Definitions     []dashboard.WidgetDefinition  `json:"definitions,omitempty"`
+	Artifacts       map[string]Artifact           `json:"artifacts"`
 }
 
 // Artifact identifies a release binary and its integrity checksum.
@@ -118,7 +121,20 @@ func Validate(manifest Manifest) error {
 	if provider.ProtocolVersion != ProtocolVersion {
 		return fmt.Errorf("unsupported provider protocol version %d", provider.ProtocolVersion)
 	}
-	if err := dashboard.ValidateCatalog(provider.Widgets); err != nil {
+	if provider.ProtocolVersion == ProtocolVersion {
+		if len(provider.Widgets.Widgets) > 0 {
+			if err := dashboard.ValidateCatalog(provider.Widgets); err != nil {
+				return fmt.Errorf("provider widget catalog: %w", err)
+			}
+		}
+		if err := dashboard.ValidateProviderDescription(dashboard.ProviderDescription{
+			ID: provider.ID, Name: provider.Name, Description: provider.Description,
+			ProtocolVersion: provider.ProtocolVersion, Sources: provider.Sources,
+			TemplatePacks: provider.TemplatePacks, Definitions: provider.Definitions,
+		}); err != nil {
+			return fmt.Errorf("provider description: %w", err)
+		}
+	} else if err := dashboard.ValidateCatalog(provider.Widgets); err != nil {
 		return fmt.Errorf("provider widget catalog: %w", err)
 	}
 	if len(provider.Artifacts) == 0 {
@@ -152,6 +168,9 @@ func ValidateRepositoryIndex(index RepositoryIndex) error {
 	}
 	providerIDs := make(map[string]bool, len(index.Providers))
 	widgetIDs := map[string]bool{}
+	sourceIDs := map[string]bool{}
+	templateIDs := map[string]bool{}
+	definitionIDs := map[string]bool{}
 	for _, provider := range index.Providers {
 		if err := validateRepositoryProvider(provider); err != nil {
 			return err
@@ -165,6 +184,26 @@ func ValidateRepositoryIndex(index RepositoryIndex) error {
 				return fmt.Errorf("duplicate widget ID %q", widget.ID)
 			}
 			widgetIDs[widget.ID] = true
+		}
+		for _, source := range provider.Sources {
+			if sourceIDs[source.ID] {
+				return fmt.Errorf("duplicate source ID %q", source.ID)
+			}
+			sourceIDs[source.ID] = true
+		}
+		for _, pack := range provider.TemplatePacks {
+			for _, template := range pack.Templates {
+				if templateIDs[template.ID] {
+					return fmt.Errorf("duplicate template ID %q", template.ID)
+				}
+				templateIDs[template.ID] = true
+			}
+		}
+		for _, definition := range provider.Definitions {
+			if definitionIDs[definition.ID] {
+				return fmt.Errorf("duplicate definition ID %q", definition.ID)
+			}
+			definitionIDs[definition.ID] = true
 		}
 	}
 	return nil
@@ -190,7 +229,20 @@ func validateProviderFields(provider Provider) error {
 	if provider.ProtocolVersion != ProtocolVersion && provider.ProtocolVersion != LegacyProtocolVersion {
 		return fmt.Errorf("unsupported provider protocol version %d", provider.ProtocolVersion)
 	}
-	if err := dashboard.ValidateCatalog(provider.Widgets); err != nil {
+	if provider.ProtocolVersion == ProtocolVersion {
+		if len(provider.Widgets.Widgets) > 0 {
+			if err := dashboard.ValidateCatalog(provider.Widgets); err != nil {
+				return fmt.Errorf("provider widget catalog: %w", err)
+			}
+		}
+		if err := dashboard.ValidateProviderDescription(dashboard.ProviderDescription{
+			ID: provider.ID, Name: provider.Name, Description: provider.Description,
+			ProtocolVersion: provider.ProtocolVersion, Sources: provider.Sources,
+			TemplatePacks: provider.TemplatePacks, Definitions: provider.Definitions,
+		}); err != nil {
+			return fmt.Errorf("provider description: %w", err)
+		}
+	} else if err := dashboard.ValidateCatalog(provider.Widgets); err != nil {
 		return fmt.Errorf("provider widget catalog: %w", err)
 	}
 	return nil

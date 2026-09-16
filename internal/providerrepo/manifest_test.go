@@ -41,9 +41,9 @@ func TestParseManifestRejectsInvalidSecurityAndSchemaFields(t *testing.T) {
 			m.Provider.Artifacts["linux-amd64"] = Artifact{URL: "https://example.test/bin", SHA256: "not-a-checksum"}
 		}, "SHA-256"},
 		{"unsupported platform", func(m *Manifest) { m.Provider.Artifacts["plan9-amd64"] = m.Provider.Artifacts["linux-amd64"] }, "platform"},
-		{"duplicate widget ID", func(m *Manifest) {
-			m.Provider.Widgets.Widgets = append(m.Provider.Widgets.Widgets, m.Provider.Widgets.Widgets[0])
-		}, "duplicate widget ID"},
+		{"duplicate source ID", func(m *Manifest) {
+			m.Provider.Sources = append(m.Provider.Sources, m.Provider.Sources[0])
+		}, "duplicate source ID"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestArtifactForMissingPlatform(t *testing.T) {
 	}
 }
 
-func TestRepositoryIndexRejectsDuplicateProvidersAndWidgets(t *testing.T) {
+func TestRepositoryIndexRejectsDuplicateProvidersAndSources(t *testing.T) {
 	manifest := validManifest()
 	index := RepositoryIndex{Version: ManifestVersion, Repository: manifest.Repository, Providers: []Provider{manifest.Provider, manifest.Provider}}
 	if err := ValidateRepositoryIndex(index); err == nil || !strings.Contains(err.Error(), "duplicate provider") {
@@ -83,8 +83,8 @@ func TestRepositoryIndexRejectsDuplicateProvidersAndWidgets(t *testing.T) {
 	second := manifest.Provider
 	second.ID = "other"
 	index.Providers = []Provider{manifest.Provider, second}
-	if err := ValidateRepositoryIndex(index); err == nil || !strings.Contains(err.Error(), "duplicate widget") {
-		t.Fatalf("duplicate widget error = %v", err)
+	if err := ValidateRepositoryIndex(index); err == nil || !strings.Contains(err.Error(), "duplicate source") {
+		t.Fatalf("duplicate source error = %v", err)
 	}
 }
 
@@ -107,7 +107,7 @@ func validManifest() Manifest {
 		Repository: Repository{ID: "core", Name: "Core providers", Description: "GryphDash providers"},
 		Provider: Provider{
 			ID: "currency", Name: "Currency", Description: "Exchange rates", Version: "1.0.0", ProtocolVersion: ProtocolVersion,
-			Widgets: dashboard.WidgetCatalog{Widgets: []dashboard.WidgetConfig{{ID: "currency/rate", Group: "Currency", Name: "Rate", Description: "A rate", Width: 4, Height: 2, Logic: dashboard.WidgetLogic{Type: "scalar"}}}},
+			Sources: []dashboard.SourceDescription{{ID: "currency/rate", Name: "Rate", Description: "A rate", Schema: map[string]any{"type": "object"}}},
 			Artifacts: map[string]Artifact{
 				"linux-amd64":   {URL: "https://example.test/currency-linux-amd64", SHA256: strings.Repeat("a", 64)},
 				"windows-amd64": {URL: "https://example.test/currency-windows-amd64.exe", SHA256: strings.Repeat("b", 64)},
