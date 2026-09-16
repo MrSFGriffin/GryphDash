@@ -2,7 +2,8 @@
 
 GryphDash provider repositories are HTTPS-hosted repository indexes. One
 repository contains one or more provider groups (for example, Codex, Currency,
-and OpenRouter), each with a widget catalog and platform-specific artifacts.
+and OpenRouter), each with protocol-v2 data-source descriptions and
+platform-specific artifacts.
 
 ## Repository index format
 
@@ -22,8 +23,15 @@ The current schema is version 1:
       "name": "Currency",
       "description": "Reference exchange rates",
       "version": "1.0.0",
-      "protocolVersion": 1,
-      "widgets": { "widgets": [] },
+      "protocolVersion": 2,
+      "sources": [
+        {
+          "id": "currency/eur-usd",
+          "name": "EUR/USD exchange rate",
+          "description": "US dollars per euro",
+          "schema": { "type": "object" }
+        }
+      ],
       "artifacts": {
         "linux-amd64": {
           "url": "https://downloads.example/currency-linux-amd64",
@@ -40,11 +48,12 @@ The current schema is version 1:
 ```
 
 `version`, repository and provider identifiers, provider metadata,
-`protocolVersion`, widget definitions, and artifact checksums are required.
+`protocolVersion`, data-source descriptions, and artifact checksums are required.
 Artifact URLs must be HTTPS and must be supplied for the target platform.
 Supported platforms are `linux-amd64`, `windows-amd64`, `darwin-amd64`, and
-`darwin-arm64`. Widget IDs must be unique within a provider and across the
-combined GryphDash catalog.
+`darwin-arm64`. Source, template, and definition IDs must be unique within a
+provider and across the combined GryphDash description catalog. Protocol-v1
+manifests are reported as incompatible and require a provider update.
 
 Metadata discovery fetches only the repository index. It never downloads or executes an
 artifact. Installation downloads the selected artifact, verifies SHA-256,
