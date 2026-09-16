@@ -21,8 +21,9 @@ import (
 
 const (
 	// ManifestVersion is the currently supported repository manifest schema.
-	ManifestVersion = 1
-	ProtocolVersion = 1
+	ManifestVersion       = 1
+	ProtocolVersion       = 2
+	LegacyProtocolVersion = 1
 )
 
 var identifierPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
@@ -152,7 +153,7 @@ func ValidateRepositoryIndex(index RepositoryIndex) error {
 	providerIDs := make(map[string]bool, len(index.Providers))
 	widgetIDs := map[string]bool{}
 	for _, provider := range index.Providers {
-		if err := Validate(Manifest{Version: index.Version, Repository: index.Repository, Provider: provider}); err != nil {
+		if err := validateRepositoryProvider(provider); err != nil {
 			return err
 		}
 		if providerIDs[provider.ID] {
@@ -165,6 +166,32 @@ func ValidateRepositoryIndex(index RepositoryIndex) error {
 			}
 			widgetIDs[widget.ID] = true
 		}
+	}
+	return nil
+}
+
+func validateRepositoryProvider(provider Provider) error {
+	return validateProviderFields(provider)
+}
+
+func validateProviderFields(provider Provider) error {
+	if err := validateIdentifier("provider ID", provider.ID); err != nil {
+		return err
+	}
+	for field, value := range map[string]string{
+		"provider name":        provider.Name,
+		"provider description": provider.Description,
+		"provider version":     provider.Version,
+	} {
+		if err := requireText(field, value); err != nil {
+			return err
+		}
+	}
+	if provider.ProtocolVersion != ProtocolVersion && provider.ProtocolVersion != LegacyProtocolVersion {
+		return fmt.Errorf("unsupported provider protocol version %d", provider.ProtocolVersion)
+	}
+	if err := dashboard.ValidateCatalog(provider.Widgets); err != nil {
+		return fmt.Errorf("provider widget catalog: %w", err)
 	}
 	return nil
 }

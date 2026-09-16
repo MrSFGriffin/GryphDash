@@ -507,8 +507,9 @@
 					const providerRow = element("div", "provider-item");
 					const label = status.name + " · " + status.state + (status.installedVersion ? ` (${status.installedVersion})` : "") + (status.error ? `: ${status.error}` : "");
 					providerRow.append(element("p", "note", label));
-					if (status.state === "available" || status.state === "update" || status.state === "error") {
-						const button = element("button", "", status.state === "update" ? "Update" : "Install");
+					if (status.state === "available" || status.state === "update" || status.state === "incompatible" || status.state === "error") {
+						const update = status.state === "update" || status.state === "incompatible";
+						const button = element("button", "", update ? "Update" : "Install");
 						button.onclick = async () => {
 							button.disabled = true;
 							try {
@@ -516,7 +517,7 @@
 									method: "POST",
 									headers: { "Content-Type": "application/json" },
 									body: JSON.stringify({
-										operation: status.state === "update" ? "update" : "install",
+										operation: update ? "update" : "install",
 										repositoryUrl: status.repositoryUrl,
 										providerId: status.providerId
 									})

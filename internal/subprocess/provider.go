@@ -214,6 +214,37 @@ func DescriptionsWithError(parent context.Context, providers []Provider) (dashbo
 	return merged, nil
 }
 
+// CatalogFromDescription is the temporary legacy UI projection used until
+// dashboard instances replace the display-ready widget API. Provider
+// discovery itself remains description-first.
+func CatalogFromDescription(description dashboard.ProviderDescription) dashboard.WidgetCatalog {
+	widgets := make([]dashboard.WidgetConfig, 0, len(description.Definitions))
+	for _, definition := range description.Definitions {
+		logic := dashboard.WidgetLogic{Type: "scalar"}
+		for name, raw := range definition.Inputs {
+			input, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			if source, ok := input["source"].(string); ok {
+				logic.Source = source
+			}
+			if expression, ok := input["expression"].(string); ok {
+				logic.Path = strings.TrimPrefix(expression, "$")
+			}
+			if name == "" {
+				break
+			}
+		}
+		widgets = append(widgets, dashboard.WidgetConfig{
+			ID: definition.ID, Group: definition.Group, Name: definition.Name,
+			Description: definition.Description, Default: definition.Default,
+			Width: definition.Width, Height: definition.Height, Logic: logic,
+		})
+	}
+	return dashboard.WidgetCatalog{Widgets: widgets}
+}
+
 func Catalog(parent context.Context, providers []Provider) dashboard.WidgetCatalog {
 	catalog, err := CatalogWithError(parent, providers)
 	if err != nil {
@@ -225,20 +256,11 @@ func Catalog(parent context.Context, providers []Provider) dashboard.WidgetCatal
 // CatalogWithError loads and merges provider catalogs, rejecting invalid
 // catalogs and duplicate widget IDs across providers.
 func CatalogWithError(parent context.Context, providers []Provider) (dashboard.WidgetCatalog, error) {
-	merged := dashboard.WidgetCatalog{}
-	for _, provider := range providers {
-		catalog, err := provider.Widgets(parent)
-		if err != nil {
-			slog.Warn("provider widgets unavailable", "provider", provider.Name(), "error", err)
-			continue
-		}
-		candidate, err := dashboard.MergeCatalog(merged, catalog)
-		if err != nil {
-			return merged, fmt.Errorf("provider %q: %w", provider.Name(), err)
-		}
-		merged = candidate
+	description, err := DescriptionsWithError(parent, providers)
+	if err != nil {
+		return dashboard.WidgetCatalog{}, err
 	}
-	return merged, nil
+	return CatalogFromDescription(description), nil
 }
 
 func (p Provider) run(parent context.Context, method string) (providerprotocol.Response, error) {

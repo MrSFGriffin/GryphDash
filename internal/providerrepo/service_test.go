@@ -62,6 +62,18 @@ func TestServiceReportsStaleMetadata(t *testing.T) {
 	}
 }
 
+func TestServiceMarksLegacyProviderIncompatible(t *testing.T) {
+	manifest := installManifest("https://legacy.example/provider", []byte("provider"), "1.0.0")
+	manifest.Provider.ProtocolVersion = LegacyProtocolVersion
+	discovery := discoveryForManifest("https://legacy.example/repository.json", manifest)
+	service := NewService(filepath.Join(t.TempDir(), "repositories.json"), t.TempDir(), []Discovery{discovery})
+
+	statuses := service.Statuses()
+	if len(statuses) != 1 || statuses[0].State != StateIncompatible || !strings.Contains(statuses[0].Error, "update required") {
+		t.Fatalf("statuses = %+v", statuses)
+	}
+}
+
 func TestServiceInstallUsesManagedCacheAndReportsInstalling(t *testing.T) {
 	payload := []byte("#!/bin/sh\nexit 0\n")
 	release := make(chan struct{})

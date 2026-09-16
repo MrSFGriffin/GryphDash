@@ -7,19 +7,22 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+
+	"gryphdash/internal/dashboard"
 )
 
 // ProviderState is the UI-facing lifecycle state of a repository provider.
 type ProviderState string
 
 const (
-	StateAvailable   ProviderState = "available"
-	StateInstalled   ProviderState = "installed"
-	StateUpdate      ProviderState = "update"
-	StateInstalling  ProviderState = "installing"
-	StateUnavailable ProviderState = "unavailable"
-	StateStale       ProviderState = "stale"
-	StateError       ProviderState = "error"
+	StateAvailable    ProviderState = "available"
+	StateInstalled    ProviderState = "installed"
+	StateUpdate       ProviderState = "update"
+	StateInstalling   ProviderState = "installing"
+	StateUnavailable  ProviderState = "unavailable"
+	StateStale        ProviderState = "stale"
+	StateError        ProviderState = "error"
+	StateIncompatible ProviderState = "incompatible"
 )
 
 // ProviderStatus combines repository metadata with local installation state.
@@ -143,6 +146,12 @@ func (s *Service) Statuses() []ProviderStatus {
 		}
 		for _, provider := range repository.Providers {
 			status := ProviderStatus{RepositoryURL: repository.URL, RepositoryID: repository.Repository.ID, ProviderID: provider.ID, Name: provider.Name, Version: provider.Version, State: StateAvailable}
+			if provider.ProtocolVersion != dashboard.ProtocolVersion {
+				status.State = StateIncompatible
+				status.Error = fmt.Sprintf("provider protocol v%d is incompatible; update required", provider.ProtocolVersion)
+				statuses = append(statuses, status)
+				continue
+			}
 			if repository.Error != "" {
 				status.Error = repository.Error
 				status.State = StateStale
